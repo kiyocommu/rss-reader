@@ -484,6 +484,10 @@
       padding: 4px 0;
     }
 
+    #pull-refresh-indicator {
+      display: none;
+    }
+
     .article-item {
       padding: 12px 10px 12px 24px;
       cursor: pointer;
@@ -1979,6 +1983,44 @@
         padding: 8px 8px 18px;
         align-content: start;
       }
+      #pull-refresh-indicator {
+        display: block;
+        grid-column: 1 / -1;
+        height: 0;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(-8px);
+        border: 1px solid rgba(91,155,213,0.22);
+        border-radius: 999px;
+        background: rgba(15, 52, 96, 0.72);
+        color: #b0bdd0;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        transition: height 0.14s ease, opacity 0.14s ease, transform 0.14s ease;
+      }
+      #pull-refresh-indicator.visible {
+        height: 28px;
+        opacity: 1;
+        transform: translateY(0);
+        padding: 7px 10px;
+      }
+      #pull-refresh-indicator.ready {
+        color: #fff;
+        border-color: rgba(233,69,96,0.5);
+        background: rgba(233,69,96,0.22);
+      }
+      body.light #pull-refresh-indicator {
+        background: var(--rss-panel-soft);
+        border-color: var(--rss-border);
+        color: var(--rss-muted);
+      }
+      body.light #pull-refresh-indicator.ready {
+        background: var(--rss-accent-soft);
+        border-color: var(--rss-accent);
+        color: var(--rss-accent);
+      }
       #main.tile-mode .article-item,
       .article-item {
         padding: 12px;
@@ -2290,7 +2332,9 @@
       <button id="feed-refresh-btn" data-tooltip="このフィードを更新" aria-label="このフィードを更新">⟳</button>
       <button id="feed-delete-btn" data-tooltip="フィードを削除" aria-label="フィードを削除">×</button>
     </div>
-    <div id="article-list"></div>
+    <div id="article-list">
+      <div id="pull-refresh-indicator" aria-live="polite">↓ 引っ張って更新</div>
+    </div>
   </div>
   <div class="resizer" id="resizer-right"></div>
 
@@ -3907,6 +3951,11 @@ function shouldRenderTileArticles() {
 function renderArticleList() {
   const list = document.getElementById('article-list');
   list.innerHTML = '';
+  const pullIndicator = document.createElement('div');
+  pullIndicator.id = 'pull-refresh-indicator';
+  pullIndicator.setAttribute('aria-live', 'polite');
+  pullIndicator.textContent = '↓ 引っ張って更新';
+  list.appendChild(pullIndicator);
 
   filteredArticles.forEach((article, index) => {
     const div = document.createElement('div');
@@ -4170,9 +4219,94 @@ const MOBILE_DETAIL_NAV_POSITION_KEY = 'rss-mobile-detail-nav-position';
 const MOBILE_DETAIL_NAV_MARGIN = 8;
 const MOBILE_DETAIL_SWIPE_EDGE_WIDTH = 24;
 const MOBILE_DETAIL_SWIPE_BACK_DISTANCE = 72;
+const PULL_REFRESH_THRESHOLD = 70;
 
 function isMobileViewport() {
   return window.matchMedia('(max-width: 760px)').matches;
+}
+
+function canPullRefreshArticleList() {
+  const list = document.getElementById('article-list');
+  return isMobileViewport()
+    && selectedFeedUrl === null
+    && !document.body.classList.contains('mobile-detail-open')
+    && !isRefreshing
+    && !!list
+    && list.scrollTop <= 0;
+}
+
+function setPullRefreshIndicator(state, distance = 0) {
+  const indicator = document.getElementById('pull-refresh-indicator');
+  if (!indicator) return;
+  const visible = state !== 'idle';
+  indicator.classList.toggle('visible', visible);
+  indicator.classList.toggle('ready', state === 'ready');
+  if (state === 'ready') {
+    indicator.textContent = '↻ 離して更新';
+  } else if (state === 'refreshing') {
+    indicator.textContent = '更新中...';
+  } else {
+    indicator.textContent = '↓ 引っ張って更新';
+  }
+  if (visible && state !== 'refreshing') {
+    indicator.style.height = `${Math.min(44, Math.max(28, distance * 0.45))}px`;
+  } else {
+    indicator.style.height = '';
+  }
+}
+
+function initMobilePullToRefresh() {
+  const list = document.getElementById('article-list');
+  if (!list) return;
+
+  let tracking = false;
+  let startY = 0;
+  let pullDistance = 0;
+
+  list.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1 || !canPullRefreshArticleList()) return;
+    tracking = true;
+    startY = e.touches[0].clientY;
+    pullDistance = 0;
+  }, { passive: true });
+
+  list.addEventListener('touchmove', e => {
+    if (!tracking || e.touches.length !== 1) return;
+    if (!canPullRefreshArticleList()) {
+      tracking = false;
+      setPullRefreshIndicator('idle');
+      return;
+    }
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0) {
+      pullDistance = 0;
+      setPullRefreshIndicator('idle');
+      return;
+    }
+    pullDistance = dy;
+    setPullRefreshIndicator(dy >= PULL_REFRESH_THRESHOLD ? 'ready' : 'pulling', dy);
+    if (dy > 12) e.preventDefault();
+  }, { passive: false });
+
+  const finishPull = async () => {
+    if (!tracking) return;
+    const shouldRefresh = pullDistance >= PULL_REFRESH_THRESHOLD && canPullRefreshArticleList();
+    tracking = false;
+    if (!shouldRefresh) {
+      setPullRefreshIndicator('idle');
+      return;
+    }
+    setPullRefreshIndicator('refreshing');
+    await refreshAll();
+    setPullRefreshIndicator('idle');
+  };
+
+  list.addEventListener('touchend', finishPull);
+  list.addEventListener('touchcancel', () => {
+    tracking = false;
+    pullDistance = 0;
+    setPullRefreshIndicator('idle');
+  });
 }
 
 function closeMobileDetail() {
@@ -4580,6 +4714,7 @@ document.getElementById('mobile-prev-btn').addEventListener('click', () => throt
 document.getElementById('mobile-next-btn').addEventListener('click', () => throttledNav(1));
 initMobileDetailNavDrag();
 initMobileDetailSwipeBack();
+initMobilePullToRefresh();
 
 document.getElementById('view-toggle-btn').addEventListener('click', () => {
   viewMode = viewMode === 'list' ? 'tile' : 'list';
