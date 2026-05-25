@@ -2031,6 +2031,11 @@
         background: var(--rss-accent-soft);
         color: var(--rss-accent);
       }
+      :is(button, a)[data-tooltip]::before,
+      :is(button, a)[data-tooltip]::after {
+        display: none !important;
+        content: none !important;
+      }
       .cloud-status-pill { display: none; }
     }
   </style>
