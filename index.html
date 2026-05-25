@@ -1940,22 +1940,23 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 36px;
+        width: 22px;
+        min-width: 22px;
         height: 22px;
         border: 1px solid #2b4f76;
         border-radius: 4px;
         background: transparent;
-        font-size: 10px;
+        font-size: 12px;
         line-height: 1;
         color: #4a7aaa;
         text-decoration: none;
-        padding: 0 4px;
+        padding: 0;
       }
       #main.tile-mode .article-actions,
       .article-actions {
         flex-direction: column;
         gap: 5px;
-        align-items: stretch;
+        align-items: center;
         padding-top: 0;
       }
       .article-actions .tile-open-btn {
@@ -3797,7 +3798,7 @@ function renderArticleList() {
         </div>
         <div class="article-actions">
           <button class="article-pin-btn" data-tooltip="${isPinned ? 'ピンを外す' : 'ピンを付ける'}" aria-label="${isPinned ? 'ピンを外す' : 'ピンを付ける'}"><span class="pin-emoji"></span></button>
-          ${article.link ? `<a class="tile-open-btn" href="${escapeHtml(article.link)}" target="_blank" rel="noopener">↗ 開く</a>` : ''}
+          ${article.link ? `<a class="tile-open-btn" href="${escapeHtml(article.link)}" target="_blank" rel="noopener" data-tooltip="別タブで開く" aria-label="別タブで開く">↗</a>` : ''}
           ${isSaved ? '<button class="article-save-btn" data-tooltip="Read It Laterから削除" aria-label="Read It Laterから削除">🔖</button>' : ''}
         </div>
       `;
