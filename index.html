@@ -882,6 +882,12 @@
     }
 
     #detail-feed-name { color: #e94560; font-weight: 600; }
+    #detail-action-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
     #detail-pin-badge,
     #detail-save-badge {
       display: inline-flex;
@@ -1940,19 +1946,25 @@
         gap: 6px;
       }
       body.mobile-detail-open #detail-meta {
-        display: grid;
-        grid-template-columns: repeat(5, max-content);
+        display: flex;
+        flex-direction: column;
         gap: 6px;
-        align-items: center;
-        justify-content: start;
+        align-items: flex-start;
+        justify-content: flex-start;
       }
       body.mobile-detail-open #detail-feed-name {
-        grid-column: 1 / -1;
         font-size: 13px;
         line-height: 1.3;
         min-width: 0;
+        max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      body.mobile-detail-open #detail-action-row {
+        flex-wrap: nowrap;
+        gap: 6px;
+        max-width: 100%;
         white-space: nowrap;
       }
       #detail-title {
@@ -1967,6 +1979,9 @@
       }
       body.mobile-detail-open #detail-meta > * {
         justify-self: start;
+      }
+      body.mobile-detail-open #detail-action-row > * {
+        flex-shrink: 0;
       }
       body.mobile-detail-open #detail-close-btn {
         display: inline-flex !important;
@@ -1990,7 +2005,12 @@
         background: rgba(15, 32, 58, 0.88);
         box-shadow: 0 8px 22px rgba(0,0,0,0.32);
         backdrop-filter: blur(8px);
-        touch-action: manipulation;
+        cursor: grab;
+        touch-action: none;
+      }
+      body.mobile-detail-open #mobile-detail-nav.mobile-detail-nav-dragging {
+        cursor: grabbing;
+        transform: scale(1.02);
       }
       .mobile-detail-nav-btn {
         min-width: 46px;
@@ -2118,11 +2138,13 @@
       <div id="detail-meta">
         <span id="detail-new-badge" class="new-badge" style="display:none">NEW</span>
         <span id="detail-feed-name"></span>
-        <span id="detail-date"></span>
-        <button id="detail-pin-badge" type="button" aria-pressed="false" data-tooltip="ピンを付ける" aria-label="ピンを付ける"><span class="pin-emoji"></span> ピン</button>
-        <button id="detail-save-badge" type="button" aria-pressed="false" data-tooltip="Read It Laterに保存" aria-label="Read It Laterに保存">🔖 <span id="detail-save-label">保存</span></button>
-        <button id="open-link-btn" data-tooltip="別タブで開く" aria-label="別タブで開く">↗︎</button>
-        <button id="detail-close-btn" data-tooltip="閉じる" data-tooltip-align="right" aria-label="閉じる">✕</button>
+        <div id="detail-action-row">
+          <span id="detail-date"></span>
+          <button id="detail-pin-badge" type="button" aria-pressed="false" data-tooltip="ピンを付ける" aria-label="ピンを付ける"><span class="pin-emoji"></span> ピン</button>
+          <button id="detail-save-badge" type="button" aria-pressed="false" data-tooltip="Read It Laterに保存" aria-label="Read It Laterに保存">🔖 <span id="detail-save-label">保存</span></button>
+          <button id="open-link-btn" data-tooltip="別タブで開く" aria-label="別タブで開く">↗︎</button>
+          <button id="detail-close-btn" data-tooltip="閉じる" data-tooltip-align="right" aria-label="閉じる">✕</button>
+        </div>
       </div>
       <div id="detail-title"></div>
     </div>
@@ -3795,11 +3817,13 @@ function showDetail(index) {
     content.style.display = 'none';
     if (viewMode === 'tile') detailPanel.classList.add('tile-hidden');
     updateDetailActionButtons(null);
+    restoreMobileDetailNavPosition();
     return;
   }
 
   detailPanel.classList.remove('tile-hidden');
   document.body.classList.add('mobile-detail-open');
+  restoreMobileDetailNavPosition();
   const article = filteredArticles[index];
   emptyState.style.display = 'none';
   endState.style.display = 'none';
@@ -3900,6 +3924,140 @@ function throttledNav(delta) {
   if (_navThrottleTimer) return;
   selectArticle(currentIndex + delta);
   _navThrottleTimer = setTimeout(() => { _navThrottleTimer = null; }, 150);
+}
+
+const MOBILE_DETAIL_NAV_POSITION_KEY = 'rss-mobile-detail-nav-position';
+const MOBILE_DETAIL_NAV_MARGIN = 8;
+const MOBILE_DETAIL_NAV_LONG_PRESS_MS = 350;
+
+function isMobileViewport() {
+  return window.matchMedia('(max-width: 760px)').matches;
+}
+
+function getStoredMobileDetailNavPosition() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(MOBILE_DETAIL_NAV_POSITION_KEY) || 'null');
+    if (!parsed || !Number.isFinite(parsed.left) || !Number.isFinite(parsed.top)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function clampMobileDetailNavPosition(left, top) {
+  const nav = document.getElementById('mobile-detail-nav');
+  if (!nav) return { left, top };
+  const rect = nav.getBoundingClientRect();
+  const maxLeft = Math.max(MOBILE_DETAIL_NAV_MARGIN, window.innerWidth - rect.width - MOBILE_DETAIL_NAV_MARGIN);
+  const maxTop = Math.max(MOBILE_DETAIL_NAV_MARGIN, window.innerHeight - rect.height - MOBILE_DETAIL_NAV_MARGIN);
+  return {
+    left: Math.min(Math.max(left, MOBILE_DETAIL_NAV_MARGIN), maxLeft),
+    top: Math.min(Math.max(top, MOBILE_DETAIL_NAV_MARGIN), maxTop),
+  };
+}
+
+function setMobileDetailNavPosition(left, top, save = false) {
+  const nav = document.getElementById('mobile-detail-nav');
+  if (!nav) return;
+  const pos = clampMobileDetailNavPosition(left, top);
+  nav.style.left = `${pos.left}px`;
+  nav.style.top = `${pos.top}px`;
+  nav.style.bottom = 'auto';
+  if (save) {
+    try { localStorage.setItem(MOBILE_DETAIL_NAV_POSITION_KEY, JSON.stringify(pos)); } catch {}
+  }
+}
+
+function restoreMobileDetailNavPosition() {
+  const nav = document.getElementById('mobile-detail-nav');
+  if (!nav) return;
+  const stored = getStoredMobileDetailNavPosition();
+  if (!stored || !isMobileViewport()) {
+    nav.style.left = '';
+    nav.style.top = '';
+    nav.style.bottom = '';
+    return;
+  }
+  requestAnimationFrame(() => setMobileDetailNavPosition(stored.left, stored.top));
+}
+
+function initMobileDetailNavDrag() {
+  const nav = document.getElementById('mobile-detail-nav');
+  if (!nav) return;
+
+  let pressTimer = null;
+  let activePointerId = null;
+  let startX = 0;
+  let startY = 0;
+  let startLeft = 0;
+  let startTop = 0;
+  let dragging = false;
+  let suppressNextClick = false;
+
+  const cancelLongPress = () => {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+  };
+
+  nav.addEventListener('pointerdown', e => {
+    if (!isMobileViewport() || !document.body.classList.contains('mobile-detail-open')) return;
+    if (e.button !== undefined && e.button !== 0) return;
+    activePointerId = e.pointerId;
+    startX = e.clientX;
+    startY = e.clientY;
+    const rect = nav.getBoundingClientRect();
+    startLeft = rect.left;
+    startTop = rect.top;
+    dragging = false;
+    cancelLongPress();
+    pressTimer = setTimeout(() => {
+      if (activePointerId !== e.pointerId) return;
+      dragging = true;
+      suppressNextClick = true;
+      nav.classList.add('mobile-detail-nav-dragging');
+      setMobileDetailNavPosition(startLeft, startTop);
+      try { nav.setPointerCapture(e.pointerId); } catch {}
+    }, MOBILE_DETAIL_NAV_LONG_PRESS_MS);
+  });
+
+  nav.addEventListener('pointermove', e => {
+    if (e.pointerId !== activePointerId) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (!dragging) {
+      if (Math.hypot(dx, dy) > 8) cancelLongPress();
+      return;
+    }
+    e.preventDefault();
+    setMobileDetailNavPosition(startLeft + dx, startTop + dy);
+  });
+
+  const finishDrag = e => {
+    if (e.pointerId !== activePointerId) return;
+    cancelLongPress();
+    if (dragging) {
+      e.preventDefault();
+      nav.classList.remove('mobile-detail-nav-dragging');
+      const rect = nav.getBoundingClientRect();
+      setMobileDetailNavPosition(rect.left, rect.top, true);
+    }
+    try { nav.releasePointerCapture(e.pointerId); } catch {}
+    nav.classList.remove('mobile-detail-nav-dragging');
+    activePointerId = null;
+    dragging = false;
+    setTimeout(() => { suppressNextClick = false; }, 400);
+  };
+
+  nav.addEventListener('pointerup', finishDrag);
+  nav.addEventListener('pointercancel', finishDrag);
+  nav.addEventListener('click', e => {
+    if (!suppressNextClick) return;
+    e.preventDefault();
+    e.stopPropagation();
+    suppressNextClick = false;
+  }, true);
 }
 
 document.addEventListener('keydown', (e) => {
@@ -4155,6 +4313,7 @@ document.getElementById('mobile-back-btn').addEventListener('click', () => {
 });
 document.getElementById('mobile-prev-btn').addEventListener('click', () => throttledNav(-1));
 document.getElementById('mobile-next-btn').addEventListener('click', () => throttledNav(1));
+initMobileDetailNavDrag();
 
 document.getElementById('view-toggle-btn').addEventListener('click', () => {
   viewMode = viewMode === 'list' ? 'tile' : 'list';
@@ -4220,8 +4379,12 @@ window.matchMedia('(max-width: 760px)').addEventListener('change', () => {
     document.body.classList.remove('mobile-detail-open');
     setMobileFeedInputOpen(false);
     setMobileFeedFilterOpen(false);
+    restoreMobileDetailNavPosition();
+  } else {
+    restoreMobileDetailNavPosition();
   }
 });
+window.addEventListener('resize', restoreMobileDetailNavPosition);
 
 // ============================================================
 // Initial load: restore feeds from localStorage and fetch
