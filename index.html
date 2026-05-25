@@ -146,7 +146,12 @@
       color: #fff;
     }
 
-    #settings-btn {
+    #mobile-feed-input-toggle {
+      display: none;
+    }
+
+    #settings-btn,
+    #mobile-feed-input-toggle {
       background: transparent;
       border: 1px solid #2b4f76;
       border-radius: 999px;
@@ -157,7 +162,8 @@
       cursor: pointer;
       transition: background 0.2s, border-color 0.2s, color 0.2s;
     }
-    #settings-btn:hover {
+    #settings-btn:hover,
+    #mobile-feed-input-toggle:hover {
       background: #17284a;
       border-color: #e94560;
       color: #fff;
@@ -288,6 +294,39 @@
     #rss-custom-proxy-input:focus { outline: none; border-color: #e94560; }
     #rss-custom-proxy-input::placeholder { color: #3a4a5a; }
     .rss-settings-hint { font-size: 11px; color: #5a6a7a; margin-top: 8px; line-height: 1.5; }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border: 1px solid #1a3a6e;
+      border-radius: 6px;
+      background: rgba(15, 52, 96, 0.38);
+    }
+    .settings-row-label {
+      color: #c8d6e5;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    #settings-theme-toggle-btn {
+      background: transparent;
+      border: 1px solid #2b4f76;
+      border-radius: 999px;
+      color: #b0bdd0;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      padding: 7px 12px;
+      white-space: nowrap;
+    }
+    #settings-theme-toggle-btn:hover {
+      background: #17284a;
+      border-color: #e94560;
+      color: #fff;
+    }
     #rss-settings-modal-footer {
       padding: 10px 16px;
       border-top: 1px solid #1a3a6e;
@@ -1304,7 +1343,8 @@
     body.light #save-btn,
     body.light #load-btn,
     body.light #paste-btn,
-    body.light #settings-btn {
+    body.light #settings-btn,
+    body.light #mobile-feed-input-toggle {
       background: transparent;
       border-color: var(--rss-border);
       color: var(--rss-muted);
@@ -1313,7 +1353,8 @@
     body.light #save-btn:hover,
     body.light #load-btn:hover,
     body.light #paste-btn:hover,
-    body.light #settings-btn:hover {
+    body.light #settings-btn:hover,
+    body.light #mobile-feed-input-toggle:hover {
       background: var(--rss-panel-soft);
       border-color: var(--rss-accent);
       color: var(--rss-text);
@@ -1335,6 +1376,21 @@
     body.light #rss-settings-close-btn:hover { color: var(--rss-accent); }
     body.light #rss-settings-modal-body label,
     body.light .rss-settings-hint { color: var(--rss-muted); }
+    body.light .settings-row {
+      background: var(--rss-panel-soft);
+      border-color: var(--rss-border);
+    }
+    body.light .settings-row-label { color: var(--rss-text); }
+    body.light #settings-theme-toggle-btn {
+      background: transparent;
+      border-color: var(--rss-border);
+      color: var(--rss-muted);
+    }
+    body.light #settings-theme-toggle-btn:hover {
+      background: var(--rss-accent-soft);
+      border-color: var(--rss-accent);
+      color: var(--rss-accent);
+    }
     body.light #rss-settings-modal-footer { border-color: var(--rss-border); }
     body.light #rss-custom-proxy-input { background: var(--rss-bg); border-color: var(--rss-border); color: var(--rss-text); }
     body.light #rss-custom-proxy-input:focus { border-color: var(--rss-accent); }
@@ -1699,6 +1755,19 @@
         order: 3;
         flex-basis: 100%;
         min-width: 0;
+        display: none;
+      }
+      body.mobile-feed-input-open #feed-input-wrapper {
+        display: block;
+      }
+      #mobile-feed-input-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      body.mobile-feed-input-open #mobile-feed-input-toggle {
+        color: #e94560;
+        border-color: #e94560;
       }
       #save-btn,
       #load-btn,
@@ -1742,6 +1811,7 @@
         inset: 0;
         transform: translateX(0);
       }
+      body.mobile-detail-open #header { display: none; }
       body.mobile-detail-open #pin-bar { display: none; }
       #article-list-header {
         min-height: 48px;
@@ -1832,9 +1902,25 @@
         flex-wrap: wrap;
         gap: 6px;
       }
+      body.mobile-detail-open #detail-meta {
+        display: grid;
+        grid-template-columns: auto auto auto auto 1fr;
+        gap: 6px;
+        align-items: center;
+      }
+      body.mobile-detail-open #detail-feed-name {
+        grid-column: 1 / -1;
+        font-size: 13px;
+        line-height: 1.3;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
       #detail-title {
         font-size: 19px;
         line-height: 1.45;
+        margin-top: 10px;
       }
       #detail-content {
         padding: 14px 14px 86px;
@@ -1910,6 +1996,7 @@
   <button id="save-btn" data-tooltip="フィード設定を書き出す" aria-label="フィード設定をJSONファイルに保存">export</button>
   <button id="load-btn" data-tooltip="フィード設定を読み込む" aria-label="JSONファイルからフィード設定を読み込む">import</button>
   <button id="settings-btn" data-tooltip="設定" data-tooltip-align="right" aria-label="設定">⚙</button>
+  <button id="mobile-feed-input-toggle" data-tooltip="URL入力" data-tooltip-align="right" aria-label="RSSフィードURL入力欄を開く" aria-expanded="false">URL</button>
   <input id="load-input" type="file" accept=".json" style="display:none">
 </div>
 
@@ -2023,6 +2110,10 @@
       <button id="rss-settings-close-btn" data-tooltip="閉じる" aria-label="閉じる">✕</button>
     </div>
     <div id="rss-settings-modal-body">
+      <div class="settings-row">
+        <span class="settings-row-label">表示テーマ</span>
+        <button id="settings-theme-toggle-btn" type="button" data-tooltip="テーマを切り替え" aria-label="ライト/ダークモード切替">ダーク</button>
+      </div>
       <label for="rss-custom-proxy-input">カスタムCORSプロキシ URL（省略可）</label>
       <input type="url" id="rss-custom-proxy-input" placeholder="例: http://localhost:8080/" />
       <div class="rss-settings-hint">設定時は公開プロキシを使わずこのURLにリクエストを転送します<br>空欄のままにすると従来どおり公開プロキシ（allorigins.win 等）を使用</div>
@@ -2411,6 +2502,29 @@ let feeds = (() => { try { return JSON.parse(localStorage.getItem('rss-feeds') |
 
 // テーマ
 let currentTheme = localStorage.getItem('rss-theme') || 'dark';
+
+function updateThemeControls() {
+  const label = currentTheme === 'light' ? 'ライト' : 'ダーク';
+  const nextLabel = currentTheme === 'light' ? 'ダークモードに切り替え' : 'ライトモードに切り替え';
+  const settingsBtn = document.getElementById('settings-theme-toggle-btn');
+  if (settingsBtn) {
+    settingsBtn.textContent = label;
+    settingsBtn.setAttribute('aria-label', nextLabel);
+    setButtonHelp(settingsBtn, nextLabel);
+  }
+  const footerBtn = document.getElementById('theme-btn');
+  if (footerBtn) {
+    footerBtn.setAttribute('aria-label', nextLabel);
+    setButtonHelp(footerBtn, nextLabel);
+  }
+}
+
+function toggleTheme() {
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.body.classList.toggle('light', currentTheme === 'light');
+  localStorage.setItem('rss-theme', currentTheme);
+  updateThemeControls();
+}
 
 // プロキシ成功履歴: { feedUrl: strategyName }
 let proxyCache = (() => { try { return JSON.parse(localStorage.getItem('rss-proxy-cache') || '{}'); } catch { return {}; } })();
@@ -3793,6 +3907,18 @@ function openCurrentArticle() {
   }
 }
 
+function setMobileFeedInputOpen(open) {
+  document.body.classList.toggle('mobile-feed-input-open', open);
+  const btn = document.getElementById('mobile-feed-input-toggle');
+  if (!btn) return;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  btn.setAttribute('aria-label', open ? 'RSSフィードURL入力欄を閉じる' : 'RSSフィードURL入力欄を開く');
+  setButtonHelp(btn, open ? 'URL入力を閉じる' : 'URL入力');
+  if (open) {
+    setTimeout(() => document.getElementById('feed-input')?.focus(), 0);
+  }
+}
+
 // ============================================================
 // Event listeners
 // ============================================================
@@ -3800,6 +3926,7 @@ document.getElementById('add-btn').addEventListener('click', () => {
   const input = document.getElementById('feed-input');
   addFeed(input.value);
   input.value = '';
+  if (window.matchMedia('(max-width: 760px)').matches) setMobileFeedInputOpen(false);
 });
 
 document.getElementById('feed-input').addEventListener('keydown', (e) => {
@@ -3807,7 +3934,12 @@ document.getElementById('feed-input').addEventListener('keydown', (e) => {
     const input = e.target;
     addFeed(input.value);
     input.value = '';
+    if (window.matchMedia('(max-width: 760px)').matches) setMobileFeedInputOpen(false);
   }
+});
+
+document.getElementById('mobile-feed-input-toggle').addEventListener('click', () => {
+  setMobileFeedInputOpen(!document.body.classList.contains('mobile-feed-input-open'));
 });
 
 
@@ -3957,11 +4089,8 @@ document.getElementById('paste-btn').addEventListener('click', async () => {
   }
 });
 
-document.getElementById('theme-btn').addEventListener('click', () => {
-  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-  document.body.classList.toggle('light', currentTheme === 'light');
-  localStorage.setItem('rss-theme', currentTheme);
-});
+document.getElementById('theme-btn').addEventListener('click', toggleTheme);
+document.getElementById('settings-theme-toggle-btn').addEventListener('click', toggleTheme);
 
 document.getElementById('open-link-btn').addEventListener('click', openCurrentArticle);
 document.getElementById('detail-pin-badge').addEventListener('click', () => togglePin(currentIndex));
@@ -3992,6 +4121,7 @@ window.matchMedia('(max-width: 760px)').addEventListener('change', () => {
   renderArticleList();
   if (!window.matchMedia('(max-width: 760px)').matches) {
     document.body.classList.remove('mobile-detail-open');
+    setMobileFeedInputOpen(false);
   }
 });
 
@@ -3999,6 +4129,7 @@ window.matchMedia('(max-width: 760px)').addEventListener('change', () => {
 // Initial load: restore feeds from localStorage and fetch
 // ============================================================
 (async function init() {
+  updateThemeControls();
   if (localStorage.getItem('rss-viewmode') === 'tile') {
     viewMode = 'tile';
     document.getElementById('main').classList.add('tile-mode');
