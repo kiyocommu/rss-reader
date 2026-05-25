@@ -1983,6 +1983,7 @@
         padding: 8px 8px 18px;
         align-content: start;
       }
+<<<<<<< HEAD
       #pull-refresh-indicator {
         display: block;
         grid-column: 1 / -1;
@@ -2021,6 +2022,8 @@
         border-color: var(--rss-accent);
         color: var(--rss-accent);
       }
+=======
+>>>>>>> 09e12090167558fccc570f8f3581289df37e7e68
       #main.tile-mode .article-item,
       .article-item {
         padding: 12px;
@@ -4219,12 +4222,16 @@ const MOBILE_DETAIL_NAV_POSITION_KEY = 'rss-mobile-detail-nav-position';
 const MOBILE_DETAIL_NAV_MARGIN = 8;
 const MOBILE_DETAIL_SWIPE_EDGE_WIDTH = 24;
 const MOBILE_DETAIL_SWIPE_BACK_DISTANCE = 72;
+<<<<<<< HEAD
 const PULL_REFRESH_THRESHOLD = 70;
+=======
+>>>>>>> 09e12090167558fccc570f8f3581289df37e7e68
 
 function isMobileViewport() {
   return window.matchMedia('(max-width: 760px)').matches;
 }
 
+<<<<<<< HEAD
 function canPullRefreshArticleList() {
   const list = document.getElementById('article-list');
   return isMobileViewport()
@@ -4309,6 +4316,8 @@ function initMobilePullToRefresh() {
   });
 }
 
+=======
+>>>>>>> 09e12090167558fccc570f8f3581289df37e7e68
 function closeMobileDetail() {
   currentIndex = -1;
   document.body.classList.remove('mobile-detail-open');
@@ -4714,7 +4723,10 @@ document.getElementById('mobile-prev-btn').addEventListener('click', () => throt
 document.getElementById('mobile-next-btn').addEventListener('click', () => throttledNav(1));
 initMobileDetailNavDrag();
 initMobileDetailSwipeBack();
+<<<<<<< HEAD
 initMobilePullToRefresh();
+=======
+>>>>>>> 09e12090167558fccc570f8f3581289df37e7e68
 
 document.getElementById('view-toggle-btn').addEventListener('click', () => {
   viewMode = viewMode === 'list' ? 'tile' : 'list';
@@ -4793,10 +4805,13 @@ window.matchMedia('(max-width: 760px)').addEventListener('change', () => {
     setMobileFeedFilterOpen(false);
     restoreMobileDetailNavPosition();
   } else {
+<<<<<<< HEAD
     if (currentIndex >= 0) {
       document.body.classList.add('mobile-detail-open');
       showDetail(currentIndex);
     }
+=======
+>>>>>>> 09e12090167558fccc570f8f3581289df37e7e68
     restoreMobileDetailNavPosition();
   }
 });
