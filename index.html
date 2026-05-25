@@ -720,6 +720,10 @@
     body.light .focus-nav-btn { background: color-mix(in srgb, var(--rss-panel) 88%, transparent); color: var(--rss-muted); box-shadow: 0 2px 8px rgba(42,39,35,0.15); }
     body.light .focus-nav-btn:hover { background: var(--rss-accent-soft); color: var(--rss-accent); }
 
+    #mobile-detail-nav {
+      display: none;
+    }
+
     /* ピン一覧バー */
     #pin-bar {
       position: absolute;
@@ -1727,7 +1731,11 @@
       #article-list-panel { transform: translateX(0); }
       #detail-panel { transform: translateX(100%); }
       body.mobile-detail-open #article-list-panel { transform: translateX(-24%); }
-      body.mobile-detail-open #detail-panel { transform: translateX(0); }
+      body.mobile-detail-open #detail-panel {
+        inset: 0;
+        transform: translateX(0);
+      }
+      body.mobile-detail-open #pin-bar { display: none; }
       #article-list-header {
         min-height: 48px;
         padding: 8px;
@@ -1748,11 +1756,61 @@
         line-height: 1.45;
       }
       #detail-content {
-        padding: 14px;
+        padding: 14px 14px 86px;
         font-size: 16px;
         line-height: 1.8;
       }
       body.mobile-detail-open #detail-close-btn { display: inline-flex !important; }
+      body.mobile-detail-open #mobile-detail-nav {
+        position: fixed;
+        left: 12px;
+        bottom: max(12px, env(safe-area-inset-bottom));
+        z-index: 80;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px;
+        border: 1px solid rgba(91, 155, 213, 0.28);
+        border-radius: 999px;
+        background: rgba(15, 32, 58, 0.88);
+        box-shadow: 0 8px 22px rgba(0,0,0,0.32);
+        backdrop-filter: blur(8px);
+      }
+      .mobile-detail-nav-btn {
+        min-width: 46px;
+        height: 42px;
+        border: 1px solid rgba(130, 168, 210, 0.28);
+        border-radius: 999px;
+        background: rgba(26, 48, 82, 0.74);
+        color: #d0eaff;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 0 12px;
+      }
+      .mobile-detail-nav-btn:active {
+        background: rgba(64, 106, 160, 0.95);
+        color: #fff;
+      }
+      body.light #mobile-detail-nav {
+        background: color-mix(in srgb, var(--rss-panel) 92%, transparent);
+        border-color: var(--rss-border);
+        box-shadow: 0 8px 20px rgba(42,39,35,0.18);
+      }
+      body.light .mobile-detail-nav-btn {
+        background: var(--rss-panel);
+        border-color: var(--rss-border);
+        color: var(--rss-muted);
+      }
+      body.light .mobile-detail-nav-btn:active {
+        background: var(--rss-accent-soft);
+        color: var(--rss-accent);
+      }
       .cloud-status-pill { display: none; }
     }
   </style>
@@ -1843,6 +1901,11 @@
       <button class="focus-nav-btn" id="focus-prev-btn" data-tooltip="前の記事" data-tooltip-pos="top" data-tooltip-align="right" aria-label="前の記事">↑</button>
       <button class="focus-nav-btn" id="focus-next-btn" data-tooltip="次の記事" data-tooltip-pos="top" data-tooltip-align="right" aria-label="次の記事">↓</button>
       <button class="focus-nav-btn" id="focus-exit-btn" data-tooltip="集中モード解除" data-tooltip-pos="top" data-tooltip-align="right" aria-label="集中モード解除">✕</button>
+    </div>
+    <div id="mobile-detail-nav" aria-label="記事ナビゲーション">
+      <button class="mobile-detail-nav-btn" id="mobile-back-btn" data-tooltip="一覧に戻る" aria-label="一覧に戻る">← 一覧</button>
+      <button class="mobile-detail-nav-btn" id="mobile-prev-btn" data-tooltip="前の記事" aria-label="前の記事">↑ 前</button>
+      <button class="mobile-detail-nav-btn" id="mobile-next-btn" data-tooltip="次の記事" aria-label="次の記事">↓ 次</button>
     </div>
   </div>
 </div>
@@ -3770,6 +3833,14 @@ document.getElementById('saved-export-btn').addEventListener('click', () => {
 document.getElementById('focus-prev-btn').addEventListener('click', () => throttledNav(-1));
 document.getElementById('focus-next-btn').addEventListener('click', () => throttledNav(1));
 document.getElementById('focus-exit-btn').addEventListener('click', () => toggleFocusMode());
+document.getElementById('mobile-back-btn').addEventListener('click', () => {
+  currentIndex = -1;
+  document.body.classList.remove('mobile-detail-open');
+  document.querySelectorAll('.article-item').forEach(el => el.classList.remove('active'));
+  showDetail(-1);
+});
+document.getElementById('mobile-prev-btn').addEventListener('click', () => throttledNav(-1));
+document.getElementById('mobile-next-btn').addEventListener('click', () => throttledNav(1));
 
 document.getElementById('view-toggle-btn').addEventListener('click', () => {
   viewMode = viewMode === 'list' ? 'tile' : 'list';
