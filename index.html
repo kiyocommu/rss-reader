@@ -2022,7 +2022,7 @@ let cloudConfig = (() => {
 })();
 let supabaseClient = null;
 let cloudSyncTimer = null;
-let cloudSyncInFlight = false;
+let cloudSyncPromise = Promise.resolve();
 
 function hasCloudConfig() {
   return !!(cloudConfig.url && cloudConfig.anonKey && cloudConfig.profileId);
@@ -2095,9 +2095,9 @@ function queueCloudSync(reason = 'change') {
 }
 
 async function pushCloudState(reason = 'change') {
-  if (!supabaseClient || !hasCloudConfig() || cloudSyncInFlight) return;
-  cloudSyncInFlight = true;
-  try {
+  if (!supabaseClient || !hasCloudConfig()) return null;
+  clearTimeout(cloudSyncTimer);
+  const runSync = async () => {
     const feedRows = feeds.map((feed, index) => ({
       profile_id: cloudConfig.profileId,
       url: feed.url,
@@ -2135,13 +2135,14 @@ async function pushCloudState(reason = 'change') {
     });
     updateCloudStatus('online');
     if (reason === 'manual') showStatus(`同期しました（フィード${counts.feeds}件 / ピン${counts.pins}件 / 保存${counts.saved}件）`, 5000);
-  } finally {
-    cloudSyncInFlight = false;
-  }
+    return counts;
+  };
+  cloudSyncPromise = cloudSyncPromise.then(runSync, runSync);
+  return cloudSyncPromise;
 }
 
-function hasLocalSyncData() {
-  return feeds.length > 0 || pinnedUrls.size > 0 || savedArticles.length > 0;
+function hasLocalFeeds() {
+  return feeds.length > 0;
 }
 
 function formatCloudError(tableName, error) {
@@ -2201,7 +2202,11 @@ async function loadCloudState() {
       saveSaved({ skipCloud: true });
     }
     updateCloudStatus('online');
-    showStatus(`同期データを取得しました（フィード${feeds.length}件 / ピン${pinnedUrls.size}件 / 保存${savedArticles.length}件）`, 5000);
+    if (feeds.length === 0) {
+      showStatus(`同期データを取得しましたが、フィードは0件です。共有ID違い、または同期元でフィード0件として保存されています。`, 9000);
+    } else {
+      showStatus(`同期データを取得しました（フィード${feeds.length}件 / ピン${pinnedUrls.size}件 / 保存${savedArticles.length}件）`, 5000);
+    }
     return true;
   } catch (err) {
     console.error('[RSS Cloud] load failed', err);
@@ -3926,11 +3931,16 @@ document.getElementById('rss-settings-save-btn').addEventListener('click', async
   });
   document.getElementById('rss-settings-overlay').style.display = 'none';
   if (supabaseClient) {
-    if (hasLocalSyncData()) {
+    if (hasLocalFeeds()) {
       await pushCloudState('manual');
     } else {
       await loadCloudState();
     }
+    updatePinBar();
+    updateReadLaterBtn();
+    renderFeedSelect();
+    applyFilter();
+    return;
   }
   showStatus(supabaseClient ? '設定を保存し、同期を有効にしました' : (customProxyUrl ? 'カスタムプロキシを設定しました' : 'ローカルモードで使用します'));
 });
@@ -3946,8 +3956,7 @@ document.getElementById('cloud-sync-now-btn').addEventListener('click', async ()
     return;
   }
   try {
-    const hadLocalData = hasLocalSyncData();
-    if (hadLocalData) await pushCloudState('manual');
+    if (hasLocalFeeds()) await pushCloudState('manual');
     await loadCloudState();
     updatePinBar();
     updateReadLaterBtn();
