@@ -2128,8 +2128,13 @@ async function pushCloudState(reason = 'change') {
       if (error) throw error;
     }
 
+    const counts = await verifyCloudCounts({
+      feeds: feedRows.length,
+      pins: pinRows.length,
+      saved: savedRows.length,
+    });
     updateCloudStatus('online');
-    if (reason === 'manual') showStatus('同期しました');
+    if (reason === 'manual') showStatus(`同期しました（フィード${counts.feeds}件 / ピン${counts.pins}件 / 保存${counts.saved}件）`, 5000);
   } finally {
     cloudSyncInFlight = false;
   }
@@ -2150,6 +2155,23 @@ async function runCloudSelect(tableName, query) {
   const { data, error } = await query;
   if (error) throw new Error(formatCloudError(tableName, error));
   return Array.isArray(data) ? data : [];
+}
+
+async function verifyCloudCounts(expected) {
+  const [feedRows, pinRows, savedRows] = await Promise.all([
+    runCloudSelect('rss_feeds', supabaseClient.from('rss_feeds').select('url').eq('profile_id', cloudConfig.profileId)),
+    runCloudSelect('rss_pins', supabaseClient.from('rss_pins').select('link').eq('profile_id', cloudConfig.profileId)),
+    runCloudSelect('rss_saved_articles', supabaseClient.from('rss_saved_articles').select('link').eq('profile_id', cloudConfig.profileId)),
+  ]);
+  const actual = {
+    feeds: feedRows.length,
+    pins: pinRows.length,
+    saved: savedRows.length,
+  };
+  if (actual.feeds !== expected.feeds || actual.pins !== expected.pins || actual.saved !== expected.saved) {
+    throw new Error(`保存後の件数が一致しません（フィード ${actual.feeds}/${expected.feeds}、ピン ${actual.pins}/${expected.pins}、保存 ${actual.saved}/${expected.saved}）`);
+  }
+  return actual;
 }
 
 async function loadCloudState() {
@@ -2179,6 +2201,7 @@ async function loadCloudState() {
       saveSaved({ skipCloud: true });
     }
     updateCloudStatus('online');
+    showStatus(`同期データを取得しました（フィード${feeds.length}件 / ピン${pinnedUrls.size}件 / 保存${savedArticles.length}件）`, 5000);
     return true;
   } catch (err) {
     console.error('[RSS Cloud] load failed', err);
@@ -3772,8 +3795,7 @@ document.getElementById('feed-filter-select').addEventListener('change', e => {
   }
   if (supabaseClient && hasCloudConfig()) {
     showStatus('同期データを読み込み中...', 10000);
-    const loaded = await loadCloudState();
-    if (loaded) showStatus('同期データを読み込みました', 2500);
+    await loadCloudState();
   }
   updatePinBar();
   updateReadLaterBtn();
@@ -3927,7 +3949,6 @@ document.getElementById('cloud-sync-now-btn').addEventListener('click', async ()
     const hadLocalData = hasLocalSyncData();
     if (hadLocalData) await pushCloudState('manual');
     await loadCloudState();
-    if (!hadLocalData) showStatus('同期データを取得しました');
     updatePinBar();
     updateReadLaterBtn();
     renderFeedSelect();
