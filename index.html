@@ -2135,17 +2135,31 @@ async function pushCloudState(reason = 'change') {
   }
 }
 
+function hasLocalSyncData() {
+  return feeds.length > 0 || pinnedUrls.size > 0 || savedArticles.length > 0;
+}
+
+function formatCloudError(tableName, error) {
+  const code = error?.code ? ` (${error.code})` : '';
+  const message = error?.message || '原因不明';
+  const hint = error?.hint ? ` / ${error.hint}` : '';
+  return `${tableName}: ${message}${code}${hint}`;
+}
+
+async function runCloudSelect(tableName, query) {
+  const { data, error } = await query;
+  if (error) throw new Error(formatCloudError(tableName, error));
+  return Array.isArray(data) ? data : [];
+}
+
 async function loadCloudState() {
   if (!supabaseClient || !hasCloudConfig()) return false;
   try {
-    const [{ data: feedRows, error: feedError }, { data: pinRows, error: pinError }, { data: savedRows, error: savedError }] = await Promise.all([
-      supabaseClient.from('rss_feeds').select('url,title,color,created_at,updated_at').eq('profile_id', cloudConfig.profileId).order('created_at', { ascending: true }),
-      supabaseClient.from('rss_pins').select('link').eq('profile_id', cloudConfig.profileId),
-      supabaseClient.from('rss_saved_articles').select('title,link,feed_url,pub_date,image,content,saved_at').eq('profile_id', cloudConfig.profileId).order('saved_at', { ascending: false }),
+    const [feedRows, pinRows, savedRows] = await Promise.all([
+      runCloudSelect('rss_feeds', supabaseClient.from('rss_feeds').select('url,title,color,created_at,updated_at').eq('profile_id', cloudConfig.profileId).order('created_at', { ascending: true })),
+      runCloudSelect('rss_pins', supabaseClient.from('rss_pins').select('link').eq('profile_id', cloudConfig.profileId)),
+      runCloudSelect('rss_saved_articles', supabaseClient.from('rss_saved_articles').select('title,link,feed_url,pub_date,image,content,saved_at').eq('profile_id', cloudConfig.profileId).order('saved_at', { ascending: false })),
     ]);
-    if (feedError) throw feedError;
-    if (pinError) throw pinError;
-    if (savedError) throw savedError;
 
     if (Array.isArray(feedRows)) {
       feeds = feedRows.map((row, index) => ({
@@ -2168,7 +2182,7 @@ async function loadCloudState() {
     return true;
   } catch (err) {
     console.error('[RSS Cloud] load failed', err);
-    showStatus(`同期データの読み込みに失敗: ${err.message}`, 6000);
+    showStatus(`同期データの取得に失敗: ${err.message}`, 9000);
     updateCloudStatus();
     return false;
   }
@@ -3890,7 +3904,7 @@ document.getElementById('rss-settings-save-btn').addEventListener('click', async
   });
   document.getElementById('rss-settings-overlay').style.display = 'none';
   if (supabaseClient) {
-    if (feeds.length || pinnedUrls.size || savedArticles.length) {
+    if (hasLocalSyncData()) {
       await pushCloudState('manual');
     } else {
       await loadCloudState();
@@ -3910,8 +3924,10 @@ document.getElementById('cloud-sync-now-btn').addEventListener('click', async ()
     return;
   }
   try {
-    await pushCloudState('manual');
+    const hadLocalData = hasLocalSyncData();
+    if (hadLocalData) await pushCloudState('manual');
     await loadCloudState();
+    if (!hadLocalData) showStatus('同期データを取得しました');
     updatePinBar();
     updateReadLaterBtn();
     renderFeedSelect();
