@@ -1891,7 +1891,8 @@
         border: 1px solid #2a3f5f;
         background: #16213e;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
+        align-items: flex-start;
         gap: 6px;
       }
       .article-item:hover { background: #0f3460; border-color: #1a4a8a; }
@@ -1901,8 +1902,10 @@
         background: #1a1030;
         box-shadow: 0 0 0 2px rgba(233,69,96,0.35), 0 4px 16px rgba(233,69,96,0.2);
       }
+      #main.tile-mode .article-item .article-title,
       .article-item .article-title {
-        font-size: 13px;
+        font-size: 15px;
+        line-height: 1.45;
         display: -webkit-box;
         -webkit-line-clamp: 3;
         line-clamp: 3;
@@ -1928,19 +1931,42 @@
       }
       .tile-footer {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
+        align-items: flex-start;
+        justify-content: flex-start;
         margin-top: auto;
       }
+      #main.tile-mode .tile-open-btn,
       .tile-open-btn {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        height: 22px;
+        border: 1px solid #2b4f76;
+        border-radius: 4px;
+        background: transparent;
         font-size: 10px;
+        line-height: 1;
         color: #4a7aaa;
         text-decoration: none;
-        margin-top: 2px;
-        align-self: flex-start;
+        padding: 0 4px;
       }
-      .article-actions { flex-direction: row; gap: 0; }
+      #main.tile-mode .article-actions,
+      .article-actions {
+        flex-direction: column;
+        gap: 5px;
+        align-items: stretch;
+        padding-top: 0;
+      }
+      .article-actions .tile-open-btn {
+        order: 2;
+      }
+      .article-actions .article-pin-btn {
+        order: 1;
+      }
+      .article-actions .article-save-btn {
+        order: 3;
+      }
       .article-end { grid-column: 1 / -1; }
       body.light .article-item { border-color: var(--rss-border); background: var(--rss-panel); }
       body.light .article-item:hover { background: var(--rss-panel-soft); border-color: var(--rss-accent); }
@@ -2008,12 +2034,7 @@
         flex-shrink: 0;
       }
       body.mobile-detail-open #detail-close-btn {
-        display: inline-flex !important;
-        width: auto;
-        min-width: 24px;
-        max-width: max-content;
-        align-items: center;
-        justify-content: center;
+        display: none !important;
       }
       body.mobile-detail-open #mobile-detail-nav {
         position: fixed;
@@ -2034,9 +2055,14 @@
       body.mobile-detail-open #mobile-detail-nav.mobile-detail-nav-dragging {
         transform: scale(1.02);
       }
+      .mobile-detail-nav-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
       .mobile-detail-nav-handle {
         width: 28px;
-        height: 42px;
+        height: 90px;
         border: 1px solid rgba(130, 168, 210, 0.28);
         border-radius: 999px;
         background: rgba(12, 28, 50, 0.72);
@@ -2060,7 +2086,7 @@
         background: rgba(64, 106, 160, 0.95);
       }
       .mobile-detail-nav-btn {
-        min-width: 46px;
+        min-width: 58px;
         height: 42px;
         border: 1px solid rgba(130, 168, 210, 0.28);
         border-radius: 999px;
@@ -2213,8 +2239,10 @@
     </div>
     <div id="mobile-detail-nav" aria-label="記事ナビゲーション">
       <button class="mobile-detail-nav-handle" id="mobile-detail-nav-handle" type="button" data-tooltip="移動" aria-label="ボタンセットを移動">⋮⋮</button>
-      <button class="mobile-detail-nav-btn" id="mobile-prev-btn" data-tooltip="前の記事" aria-label="前の記事">↑ 前</button>
-      <button class="mobile-detail-nav-btn" id="mobile-next-btn" data-tooltip="次の記事" aria-label="次の記事">↓ 次</button>
+      <div class="mobile-detail-nav-actions">
+        <button class="mobile-detail-nav-btn" id="mobile-prev-btn" data-tooltip="前の記事" aria-label="前の記事">↑ 前</button>
+        <button class="mobile-detail-nav-btn" id="mobile-next-btn" data-tooltip="次の記事" aria-label="次の記事">↓ 次</button>
+      </div>
     </div>
   </div>
 </div>
@@ -3761,13 +3789,16 @@ function renderArticleList() {
         : '';
       const snippet = getTextSnippet(article.content, 80);
       div.innerHTML = `
-        ${thumbHtml}
-        <div class="article-title">${newBadge}${escapeHtml(article.title)}</div>
-        ${snippet ? `<div class="tile-snippet">${escapeHtml(snippet)}</div>` : ''}
-        ${metaHtml}
-        <div class="tile-footer">
-          ${article.link ? `<a class="tile-open-btn" href="${escapeHtml(article.link)}" target="_blank" rel="noopener">↗ 開く</a>` : '<span></span>'}
-          ${actionBtns}
+        <div class="article-item-main">
+          ${thumbHtml}
+          <div class="article-title">${newBadge}${escapeHtml(article.title)}</div>
+          ${snippet ? `<div class="tile-snippet">${escapeHtml(snippet)}</div>` : ''}
+          ${metaHtml}
+        </div>
+        <div class="article-actions">
+          <button class="article-pin-btn" data-tooltip="${isPinned ? 'ピンを外す' : 'ピンを付ける'}" aria-label="${isPinned ? 'ピンを外す' : 'ピンを付ける'}"><span class="pin-emoji"></span></button>
+          ${article.link ? `<a class="tile-open-btn" href="${escapeHtml(article.link)}" target="_blank" rel="noopener">↗ 開く</a>` : ''}
+          ${isSaved ? '<button class="article-save-btn" data-tooltip="Read It Laterから削除" aria-label="Read It Laterから削除">🔖</button>' : ''}
         </div>
       `;
     } else {
