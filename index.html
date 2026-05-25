@@ -1940,9 +1940,10 @@
       }
       body.mobile-detail-open #detail-meta {
         display: grid;
-        grid-template-columns: auto auto auto auto 1fr;
+        grid-template-columns: repeat(5, max-content);
         gap: 6px;
         align-items: center;
+        justify-content: start;
       }
       body.mobile-detail-open #detail-feed-name {
         grid-column: 1 / -1;
@@ -1963,7 +1964,17 @@
         font-size: 16px;
         line-height: 1.8;
       }
-      body.mobile-detail-open #detail-close-btn { display: inline-flex !important; }
+      body.mobile-detail-open #detail-meta > * {
+        justify-self: start;
+      }
+      body.mobile-detail-open #detail-close-btn {
+        display: inline-flex !important;
+        width: auto;
+        min-width: 24px;
+        max-width: max-content;
+        align-items: center;
+        justify-content: center;
+      }
       body.mobile-detail-open #mobile-detail-nav {
         position: fixed;
         left: 12px;
