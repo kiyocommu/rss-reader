@@ -2007,6 +2007,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
+const APP_VERSION = '2026-05-25.ios-rest-read-v2';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
@@ -2054,6 +2055,7 @@ function updateCloudStatus(mode) {
   if (!el) return;
   const online = mode === 'online' || (!!supabaseClient && hasCloudConfig());
   el.textContent = online ? `sync: ${cloudConfig.profileId}` : 'local';
+  el.title = `RSS Reader Cloud ${APP_VERSION}`;
   el.classList.toggle('online', online);
 }
 
@@ -2188,17 +2190,9 @@ async function cloudFetchJson(tableName, url, options = {}) {
   return resp.json();
 }
 
-async function runCloudSelect(tableName, query, fallbackUrl) {
-  try {
-    const { data, error } = await query;
-    if (error) throw new Error(formatCloudError(tableName, error));
-    return Array.isArray(data) ? data : [];
-  } catch (err) {
-    if (!fallbackUrl) throw err;
-    console.warn(`[RSS Cloud] Supabase SDK select failed; retry REST: ${tableName}`, err);
-    const data = await cloudFetchJson(tableName, fallbackUrl);
-    return Array.isArray(data) ? data : [];
-  }
+async function runCloudSelect(tableName, url) {
+  const data = await cloudFetchJson(tableName, url);
+  return Array.isArray(data) ? data : [];
 }
 
 function buildCloudSelectUrl(tableName, selectColumns, orderColumn = '') {
@@ -2211,9 +2205,9 @@ function buildCloudSelectUrl(tableName, selectColumns, orderColumn = '') {
 
 async function verifyCloudCounts(expected) {
   const [feedRows, pinRows, savedRows] = await Promise.all([
-    runCloudSelect('rss_feeds', supabaseClient.from('rss_feeds').select('url').eq('profile_id', cloudConfig.profileId), buildCloudSelectUrl('rss_feeds', 'url')),
-    runCloudSelect('rss_pins', supabaseClient.from('rss_pins').select('link').eq('profile_id', cloudConfig.profileId), buildCloudSelectUrl('rss_pins', 'link')),
-    runCloudSelect('rss_saved_articles', supabaseClient.from('rss_saved_articles').select('link').eq('profile_id', cloudConfig.profileId), buildCloudSelectUrl('rss_saved_articles', 'link')),
+    runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', 'url')),
+    runCloudSelect('rss_pins', buildCloudSelectUrl('rss_pins', 'link')),
+    runCloudSelect('rss_saved_articles', buildCloudSelectUrl('rss_saved_articles', 'link')),
   ]);
   const actual = {
     feeds: feedRows.length,
@@ -2230,9 +2224,9 @@ async function loadCloudState() {
   if (!supabaseClient || !hasCloudConfig()) return false;
   try {
     const [feedRows, pinRows, savedRows] = await Promise.all([
-      runCloudSelect('rss_feeds', supabaseClient.from('rss_feeds').select('url,title,color,created_at,updated_at').eq('profile_id', cloudConfig.profileId).order('created_at', { ascending: true }), buildCloudSelectUrl('rss_feeds', 'url,title,color,created_at,updated_at', 'created_at.asc')),
-      runCloudSelect('rss_pins', supabaseClient.from('rss_pins').select('link').eq('profile_id', cloudConfig.profileId), buildCloudSelectUrl('rss_pins', 'link')),
-      runCloudSelect('rss_saved_articles', supabaseClient.from('rss_saved_articles').select('title,link,feed_url,pub_date,image,content,saved_at').eq('profile_id', cloudConfig.profileId).order('saved_at', { ascending: false }), buildCloudSelectUrl('rss_saved_articles', 'title,link,feed_url,pub_date,image,content,saved_at', 'saved_at.desc')),
+      runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', 'url,title,color,created_at,updated_at', 'created_at.asc')),
+      runCloudSelect('rss_pins', buildCloudSelectUrl('rss_pins', 'link')),
+      runCloudSelect('rss_saved_articles', buildCloudSelectUrl('rss_saved_articles', 'title,link,feed_url,pub_date,image,content,saved_at', 'saved_at.desc')),
     ]);
 
     if (Array.isArray(feedRows)) {
