@@ -3,8 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#e94560">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="RSS Reader">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>RSS Reader Cloud</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23e94560'/><circle cx='8' cy='24' r='3' fill='white'/><path d='M 5 18 A 9 9 0 0 1 14 27' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/><path d='M 5 10 A 17 17 0 0 1 22 27' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/></svg>">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <link rel="manifest" href="./manifest.webmanifest">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -146,12 +152,15 @@
       color: #fff;
     }
 
-    #mobile-feed-input-toggle {
+    #mobile-feed-input-toggle,
+    #mobile-feed-filter-toggle,
+    #mobile-feed-filter-wrapper {
       display: none;
     }
 
     #settings-btn,
-    #mobile-feed-input-toggle {
+    #mobile-feed-input-toggle,
+    #mobile-feed-filter-toggle {
       background: transparent;
       border: 1px solid #2b4f76;
       border-radius: 999px;
@@ -163,7 +172,8 @@
       transition: background 0.2s, border-color 0.2s, color 0.2s;
     }
     #settings-btn:hover,
-    #mobile-feed-input-toggle:hover {
+    #mobile-feed-input-toggle:hover,
+    #mobile-feed-filter-toggle:hover {
       background: #17284a;
       border-color: #e94560;
       color: #fff;
@@ -1344,7 +1354,8 @@
     body.light #load-btn,
     body.light #paste-btn,
     body.light #settings-btn,
-    body.light #mobile-feed-input-toggle {
+    body.light #mobile-feed-input-toggle,
+    body.light #mobile-feed-filter-toggle {
       background: transparent;
       border-color: var(--rss-border);
       color: var(--rss-muted);
@@ -1354,9 +1365,15 @@
     body.light #load-btn:hover,
     body.light #paste-btn:hover,
     body.light #settings-btn:hover,
-    body.light #mobile-feed-input-toggle:hover {
+    body.light #mobile-feed-input-toggle:hover,
+    body.light #mobile-feed-filter-toggle:hover {
       background: var(--rss-panel-soft);
       border-color: var(--rss-accent);
+      color: var(--rss-text);
+    }
+    body.light #mobile-feed-filter-select {
+      background: var(--rss-bg);
+      border-color: var(--rss-border);
       color: var(--rss-text);
     }
     body.light #add-btn:disabled { background: transparent; border-color: var(--rss-border); color: var(--rss-muted); }
@@ -1760,12 +1777,32 @@
       body.mobile-feed-input-open #feed-input-wrapper {
         display: block;
       }
-      #mobile-feed-input-toggle {
+      #mobile-feed-filter-wrapper {
+        order: 4;
+        flex-basis: 100%;
+        min-width: 0;
+        display: none;
+      }
+      body.mobile-feed-filter-open #mobile-feed-filter-wrapper {
+        display: block;
+      }
+      #mobile-feed-filter-select {
+        width: 100%;
+        background: #0f3460;
+        border: 1px solid #1a4a8a;
+        border-radius: 6px;
+        color: #e0e0e0;
+        font-size: 14px;
+        padding: 8px 10px;
+      }
+      #mobile-feed-input-toggle,
+      #mobile-feed-filter-toggle {
         display: inline-flex;
         align-items: center;
         justify-content: center;
       }
-      body.mobile-feed-input-open #mobile-feed-input-toggle {
+      body.mobile-feed-input-open #mobile-feed-input-toggle,
+      body.mobile-feed-filter-open #mobile-feed-filter-toggle {
         color: #e94560;
         border-color: #e94560;
       }
@@ -1814,8 +1851,7 @@
       body.mobile-detail-open #header { display: none; }
       body.mobile-detail-open #pin-bar { display: none; }
       #article-list-header {
-        min-height: 48px;
-        padding: 8px;
+        display: none;
       }
       #feed-filter-select {
         max-width: 52vw;
@@ -1997,6 +2033,10 @@
   <button id="load-btn" data-tooltip="フィード設定を読み込む" aria-label="JSONファイルからフィード設定を読み込む">import</button>
   <button id="settings-btn" data-tooltip="設定" data-tooltip-align="right" aria-label="設定">⚙</button>
   <button id="mobile-feed-input-toggle" data-tooltip="URL入力" data-tooltip-align="right" aria-label="RSSフィードURL入力欄を開く" aria-expanded="false">URL</button>
+  <button id="mobile-feed-filter-toggle" data-tooltip="フィード選択" data-tooltip-align="right" aria-label="フィード選択を開く" aria-expanded="false">フィード</button>
+  <div id="mobile-feed-filter-wrapper">
+    <select id="mobile-feed-filter-select" aria-label="フィードで絞り込み"></select>
+  </div>
   <input id="load-input" type="file" accept=".json" style="display:none">
 </div>
 
@@ -2807,10 +2847,12 @@ function toggleSave(index) {
 }
 
 function updateReadLaterBtn() {
-  const select = document.getElementById('feed-filter-select');
-  if (!select) return;
-  const option = select.querySelector('option[value="__read_later__"]');
-  if (option) option.textContent = `Read It Later (${savedArticles.length})`;
+  ['feed-filter-select', 'mobile-feed-filter-select'].forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
+    const option = select.querySelector('option[value="__read_later__"]');
+    if (option) option.textContent = `Read It Later (${savedArticles.length})`;
+  });
 }
 
 const COLORS = ['#e94560','#5b9bd5','#50c878','#f5a623','#a78bfa','#34d399','#fb923c','#38bdf8'];
@@ -3516,7 +3558,15 @@ function renderFeedSelect() {
 
   select.value = [...select.options].some(opt => opt.value === currentValue) ? currentValue : '__all__';
   if (select.value === '__all__' && selectedFeedUrl && selectedFeedUrl !== 'READ_LATER') selectedFeedUrl = null;
+  renderMobileFeedSelect(select);
   updateReadLaterBtn();
+}
+
+function renderMobileFeedSelect(sourceSelect = document.getElementById('feed-filter-select')) {
+  const mobileSelect = document.getElementById('mobile-feed-filter-select');
+  if (!sourceSelect || !mobileSelect) return;
+  mobileSelect.innerHTML = sourceSelect.innerHTML;
+  mobileSelect.value = sourceSelect.value;
 }
 
 function applyFilter() {
@@ -3909,6 +3959,7 @@ function openCurrentArticle() {
 
 function setMobileFeedInputOpen(open) {
   document.body.classList.toggle('mobile-feed-input-open', open);
+  if (open) setMobileFeedFilterOpen(false);
   const btn = document.getElementById('mobile-feed-input-toggle');
   if (!btn) return;
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -3917,6 +3968,17 @@ function setMobileFeedInputOpen(open) {
   if (open) {
     setTimeout(() => document.getElementById('feed-input')?.focus(), 0);
   }
+}
+
+function setMobileFeedFilterOpen(open) {
+  document.body.classList.toggle('mobile-feed-filter-open', open);
+  if (open) setMobileFeedInputOpen(false);
+  const btn = document.getElementById('mobile-feed-filter-toggle');
+  if (!btn) return;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  btn.setAttribute('aria-label', open ? 'フィード選択を閉じる' : 'フィード選択を開く');
+  setButtonHelp(btn, open ? 'フィード選択を閉じる' : 'フィード選択');
+  if (open) renderMobileFeedSelect();
 }
 
 // ============================================================
@@ -3940,6 +4002,19 @@ document.getElementById('feed-input').addEventListener('keydown', (e) => {
 
 document.getElementById('mobile-feed-input-toggle').addEventListener('click', () => {
   setMobileFeedInputOpen(!document.body.classList.contains('mobile-feed-input-open'));
+});
+
+document.getElementById('mobile-feed-filter-toggle').addEventListener('click', () => {
+  setMobileFeedFilterOpen(!document.body.classList.contains('mobile-feed-filter-open'));
+});
+
+document.getElementById('mobile-feed-filter-select').addEventListener('change', e => {
+  selectedFeedUrl = selectValueToFeed(e.target.value);
+  currentIndex = -1;
+  renderFeedSelect();
+  applyFilter();
+  showDetail(-1);
+  setMobileFeedFilterOpen(false);
 });
 
 
@@ -4122,6 +4197,7 @@ window.matchMedia('(max-width: 760px)').addEventListener('change', () => {
   if (!window.matchMedia('(max-width: 760px)').matches) {
     document.body.classList.remove('mobile-detail-open');
     setMobileFeedInputOpen(false);
+    setMobileFeedFilterOpen(false);
   }
 });
 
