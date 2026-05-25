@@ -3799,8 +3799,13 @@ document.getElementById('feed-filter-select').addEventListener('change', e => {
     document.getElementById('detail-panel').classList.add('tile-hidden');
   }
   if (supabaseClient && hasCloudConfig()) {
-    showStatus('同期データを読み込み中...', 10000);
-    await loadCloudState();
+    if (hasLocalFeeds()) {
+      updateCloudStatus('online');
+      showStatus('ローカルにフィードがあります。サーバーへ保存するには設定の「同期」を押してください。', 7000);
+    } else {
+      showStatus('同期データを読み込み中...', 10000);
+      await loadCloudState();
+    }
   }
   updatePinBar();
   updateReadLaterBtn();
