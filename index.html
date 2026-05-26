@@ -486,6 +486,47 @@
 
     #pull-refresh-indicator {
       display: none;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(-8px);
+      margin: 0 8px;
+      border: 1px solid rgba(91,155,213,0.22);
+      border-radius: 999px;
+      background: rgba(15, 52, 96, 0.72);
+      color: #b0bdd0;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      text-align: center;
+      transition: height 0.14s ease, opacity 0.14s ease, transform 0.14s ease;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #pull-refresh-indicator.visible {
+      display: block;
+      height: 28px;
+      opacity: 1;
+      transform: translateY(0);
+      padding: 7px 10px;
+    }
+
+    #pull-refresh-indicator.ready {
+      color: #fff;
+      border-color: rgba(233,69,96,0.5);
+      background: rgba(233,69,96,0.22);
+    }
+
+    body.light #pull-refresh-indicator {
+      background: var(--rss-panel-soft);
+      border-color: var(--rss-border);
+      color: var(--rss-muted);
+    }
+
+    body.light #pull-refresh-indicator.ready {
+      background: var(--rss-accent-soft);
+      border-color: var(--rss-accent);
+      color: var(--rss-accent);
     }
 
     .article-item {
@@ -1987,39 +2028,7 @@
         display: block;
         grid-column: 1 / -1;
         height: 0;
-        overflow: hidden;
-        opacity: 0;
-        transform: translateY(-8px);
-        border: 1px solid rgba(91,155,213,0.22);
-        border-radius: 999px;
-        background: rgba(15, 52, 96, 0.72);
-        color: #b0bdd0;
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1;
-        text-align: center;
-        transition: height 0.14s ease, opacity 0.14s ease, transform 0.14s ease;
-      }
-      #pull-refresh-indicator.visible {
-        height: 28px;
-        opacity: 1;
-        transform: translateY(0);
-        padding: 7px 10px;
-      }
-      #pull-refresh-indicator.ready {
-        color: #fff;
-        border-color: rgba(233,69,96,0.5);
-        background: rgba(233,69,96,0.22);
-      }
-      body.light #pull-refresh-indicator {
-        background: var(--rss-panel-soft);
-        border-color: var(--rss-border);
-        color: var(--rss-muted);
-      }
-      body.light #pull-refresh-indicator.ready {
-        background: var(--rss-accent-soft);
-        border-color: var(--rss-accent);
-        color: var(--rss-accent);
+        margin: 0;
       }
       #main.tile-mode .article-item,
       .article-item {
@@ -4014,6 +4023,12 @@ function renderArticleList() {
     }
 
     div.addEventListener('click', e => {
+      if (suppressNextArticleClick) {
+        suppressNextArticleClick = false;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       if (e.target.closest('.tile-open-btn')) return;
       if (e.target.closest('.article-pin-btn')) { togglePin(index); return; }
       if (e.target.closest('.article-save-btn')) { toggleSave(index); return; }
@@ -4026,7 +4041,15 @@ function renderArticleList() {
     const endDiv = document.createElement('div');
     endDiv.className = 'article-end' + (currentIndex === filteredArticles.length ? ' active' : '');
     endDiv.innerHTML = `<div class="article-end-line">✦ 以上 ✦</div>`;
-    endDiv.addEventListener('click', () => selectArticle(filteredArticles.length));
+    endDiv.addEventListener('click', e => {
+      if (suppressNextArticleClick) {
+        suppressNextArticleClick = false;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      selectArticle(filteredArticles.length);
+    });
     list.appendChild(endDiv);
   }
 }
@@ -4220,14 +4243,16 @@ const MOBILE_DETAIL_NAV_MARGIN = 8;
 const MOBILE_DETAIL_SWIPE_EDGE_WIDTH = 24;
 const MOBILE_DETAIL_SWIPE_BACK_DISTANCE = 72;
 const PULL_REFRESH_THRESHOLD = 70;
+let suppressNextArticleClick = false;
 
 function isMobileViewport() {
   return window.matchMedia('(max-width: 760px)').matches;
 }
 
-function canPullRefreshArticleList() {
+function canPullRefreshArticleList(options = {}) {
+  const mobileOnly = options.mobileOnly === true;
   const list = document.getElementById('article-list');
-  return isMobileViewport()
+  return (!mobileOnly || isMobileViewport())
     && selectedFeedUrl === null
     && !document.body.classList.contains('mobile-detail-open')
     && !isRefreshing
@@ -4255,6 +4280,10 @@ function setPullRefreshIndicator(state, distance = 0) {
   }
 }
 
+function shouldIgnorePullStartTarget(target) {
+  return !!target.closest('button, a, input, select, textarea, [contenteditable="true"]');
+}
+
 function initMobilePullToRefresh() {
   const list = document.getElementById('article-list');
   if (!list) return;
@@ -4264,7 +4293,7 @@ function initMobilePullToRefresh() {
   let pullDistance = 0;
 
   list.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1 || !canPullRefreshArticleList()) return;
+    if (e.touches.length !== 1 || !canPullRefreshArticleList({ mobileOnly: true })) return;
     tracking = true;
     startY = e.touches[0].clientY;
     pullDistance = 0;
@@ -4272,7 +4301,7 @@ function initMobilePullToRefresh() {
 
   list.addEventListener('touchmove', e => {
     if (!tracking || e.touches.length !== 1) return;
-    if (!canPullRefreshArticleList()) {
+    if (!canPullRefreshArticleList({ mobileOnly: true })) {
       tracking = false;
       setPullRefreshIndicator('idle');
       return;
@@ -4290,7 +4319,7 @@ function initMobilePullToRefresh() {
 
   const finishPull = async () => {
     if (!tracking) return;
-    const shouldRefresh = pullDistance >= PULL_REFRESH_THRESHOLD && canPullRefreshArticleList();
+    const shouldRefresh = pullDistance >= PULL_REFRESH_THRESHOLD && canPullRefreshArticleList({ mobileOnly: true });
     tracking = false;
     if (!shouldRefresh) {
       setPullRefreshIndicator('idle');
@@ -4307,6 +4336,72 @@ function initMobilePullToRefresh() {
     pullDistance = 0;
     setPullRefreshIndicator('idle');
   });
+}
+
+function initDesktopPullToRefresh() {
+  const list = document.getElementById('article-list');
+  if (!list) return;
+
+  let tracking = false;
+  let startY = 0;
+  let pullDistance = 0;
+  let pointerId = null;
+
+  const cancelPull = () => {
+    tracking = false;
+    pointerId = null;
+    pullDistance = 0;
+    setPullRefreshIndicator('idle');
+  };
+
+  list.addEventListener('pointerdown', e => {
+    if (isMobileViewport() || e.pointerType === 'touch' || e.button !== 0) return;
+    if (shouldIgnorePullStartTarget(e.target) || !canPullRefreshArticleList()) return;
+    tracking = true;
+    pointerId = e.pointerId;
+    startY = e.clientY;
+    pullDistance = 0;
+    list.setPointerCapture(pointerId);
+  });
+
+  list.addEventListener('pointermove', e => {
+    if (!tracking || e.pointerId !== pointerId) return;
+    if (isMobileViewport() || !canPullRefreshArticleList()) {
+      cancelPull();
+      return;
+    }
+    const dy = e.clientY - startY;
+    if (dy <= 0) {
+      pullDistance = 0;
+      setPullRefreshIndicator('idle');
+      return;
+    }
+    pullDistance = dy;
+    setPullRefreshIndicator(dy >= PULL_REFRESH_THRESHOLD ? 'ready' : 'pulling', dy);
+    if (dy > 8) e.preventDefault();
+  });
+
+  const finishPull = async e => {
+    if (!tracking || e.pointerId !== pointerId) return;
+    const shouldSuppressClick = pullDistance > 8;
+    const shouldRefresh = pullDistance >= PULL_REFRESH_THRESHOLD && canPullRefreshArticleList();
+    tracking = false;
+    pointerId = null;
+    if (shouldSuppressClick) {
+      suppressNextArticleClick = true;
+      window.setTimeout(() => { suppressNextArticleClick = false; }, 250);
+    }
+    if (!shouldRefresh) {
+      setPullRefreshIndicator('idle');
+      return;
+    }
+    setPullRefreshIndicator('refreshing');
+    await refreshAll();
+    setPullRefreshIndicator('idle');
+  };
+
+  list.addEventListener('pointerup', finishPull);
+  list.addEventListener('pointercancel', cancelPull);
 }
 
 function closeMobileDetail() {
@@ -4715,6 +4810,7 @@ document.getElementById('mobile-next-btn').addEventListener('click', () => throt
 initMobileDetailNavDrag();
 initMobileDetailSwipeBack();
 initMobilePullToRefresh();
+initDesktopPullToRefresh();
 
 document.getElementById('view-toggle-btn').addEventListener('click', () => {
   viewMode = viewMode === 'list' ? 'tile' : 'list';
