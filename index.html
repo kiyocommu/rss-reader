@@ -502,61 +502,23 @@
       display: none;
       overflow: hidden;
       opacity: 0;
-      transform: translateY(-8px);
-      margin: 0 8px;
-      border: 1px solid rgba(91,155,213,0.22);
-      border-radius: 999px;
-      background: rgba(15, 52, 96, 0.72);
-      color: #b0bdd0;
-      font-size: 12px;
-      font-weight: 700;
-      line-height: 1;
-      text-align: center;
-      transition: height 0.14s ease, opacity 0.14s ease, transform 0.14s ease;
+      height: 0;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: transparent;
+      font-size: 0;
       user-select: none;
       -webkit-user-select: none;
     }
 
     #pull-refresh-indicator.visible {
-      display: block;
-      height: 28px;
-      opacity: 1;
-      transform: translateY(0);
-      padding: 7px 10px;
+      display: none;
     }
 
     #pull-refresh-indicator.ready {
-      color: #fff;
-      border-color: rgba(233,69,96,0.5);
-      background: rgba(233,69,96,0.22);
-    }
-
-    #desktop-pull-refresh-handle {
-      display: none;
-      margin: 2px 8px 6px;
-      padding: 6px 8px;
-      border: 1px dashed rgba(91,155,213,0.28);
-      border-radius: 5px;
-      color: #7a8ba0;
-      background: rgba(15,52,96,0.22);
-      cursor: ns-resize;
-      font-size: 11px;
-      font-weight: 700;
-      line-height: 1;
-      text-align: center;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    #desktop-pull-refresh-handle:not([hidden]) {
-      display: block;
-    }
-
-    #desktop-pull-refresh-handle:hover,
-    #article-list.is-pulling #desktop-pull-refresh-handle {
-      border-color: rgba(233,69,96,0.52);
-      color: #d8dde6;
-      background: rgba(233,69,96,0.12);
+      color: transparent;
     }
 
     body.light #pull-refresh-indicator {
@@ -569,19 +531,6 @@
       background: var(--rss-accent-soft);
       border-color: var(--rss-accent);
       color: var(--rss-accent);
-    }
-
-    body.light #desktop-pull-refresh-handle {
-      border-color: var(--rss-border);
-      color: var(--rss-muted);
-      background: var(--rss-panel-soft);
-    }
-
-    body.light #desktop-pull-refresh-handle:hover,
-    body.light #article-list.is-pulling #desktop-pull-refresh-handle {
-      border-color: var(--rss-accent);
-      color: var(--rss-accent);
-      background: var(--rss-accent-soft);
     }
 
     .article-item {
@@ -2085,9 +2034,6 @@
         height: 0;
         margin: 0;
       }
-      #desktop-pull-refresh-handle {
-        display: none !important;
-      }
       #main.tile-mode .article-item,
       .article-item {
         padding: 12px 10px;
@@ -2399,7 +2345,7 @@
       <button id="feed-delete-btn" data-tooltip="フィードを削除" aria-label="フィードを削除">×</button>
     </div>
     <div id="article-list">
-      <div id="pull-refresh-indicator" aria-live="polite">↓ 引っ張って更新</div>
+      <div id="pull-refresh-indicator" aria-hidden="true"></div>
     </div>
   </div>
   <div class="resizer" id="resizer-right"></div>
@@ -4058,14 +4004,9 @@ function renderArticleList() {
   list.innerHTML = '';
   const pullIndicator = document.createElement('div');
   pullIndicator.id = 'pull-refresh-indicator';
-  pullIndicator.setAttribute('aria-live', 'polite');
-  pullIndicator.textContent = '↓ 引っ張って更新';
+  pullIndicator.setAttribute('aria-hidden', 'true');
+  pullIndicator.textContent = '';
   list.appendChild(pullIndicator);
-  const desktopPullHandle = document.createElement('div');
-  desktopPullHandle.id = 'desktop-pull-refresh-handle';
-  desktopPullHandle.textContent = '下にドラッグして更新';
-  desktopPullHandle.hidden = selectedFeedUrl !== null;
-  list.appendChild(desktopPullHandle);
 
   filteredArticles.forEach((article, index) => {
     const div = document.createElement('div');
@@ -4363,30 +4304,13 @@ function canPullRefreshArticleList(options = {}) {
     && list.scrollTop <= 0;
 }
 
-function updateDesktopPullRefreshHandle() {
-  const handle = document.getElementById('desktop-pull-refresh-handle');
-  if (!handle) return;
-  handle.hidden = selectedFeedUrl !== null;
-}
-
 function setPullRefreshIndicator(state, distance = 0) {
   const indicator = document.getElementById('pull-refresh-indicator');
   if (!indicator) return;
-  const visible = state !== 'idle';
-  indicator.classList.toggle('visible', visible);
+  indicator.classList.toggle('visible', false);
   indicator.classList.toggle('ready', state === 'ready');
-  if (state === 'ready') {
-    indicator.textContent = '↻ 離して更新';
-  } else if (state === 'refreshing') {
-    indicator.textContent = '更新中...';
-  } else {
-    indicator.textContent = '↓ 引っ張って更新';
-  }
-  if (visible && state !== 'refreshing') {
-    indicator.style.height = `${Math.min(44, Math.max(28, distance * 0.45))}px`;
-  } else {
-    indicator.style.height = '';
-  }
+  indicator.textContent = '';
+  indicator.style.height = '';
 }
 
 function shouldIgnorePullStartTarget(target) {
@@ -4496,10 +4420,6 @@ function initDesktopPullToRefresh() {
     tracking = true;
     startY = e.clientY;
     pullDistance = 0;
-    if (e.target.closest('#desktop-pull-refresh-handle')) {
-      list.classList.add('is-pulling');
-      e.preventDefault();
-    }
   });
 
   window.addEventListener('mousemove', e => {
