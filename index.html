@@ -916,12 +916,21 @@
     }
 
     #detail-title {
+      display: block;
       font-size: 24px;
       font-weight: 600;
       line-height: 1.4;
       margin-top: 16px;
       margin-bottom: 0;
       color: #fff;
+      text-decoration: none;
+    }
+
+    #detail-title[href]:hover,
+    #detail-title[href]:focus-visible {
+      color: #5b9bd5;
+      text-decoration: underline;
+      text-underline-offset: 3px;
     }
 
     #detail-meta {
@@ -983,31 +992,6 @@
       border-color: rgba(91,155,213,0.6);
       color: #5b9bd5;
       filter: none;
-      opacity: 1;
-    }
-
-    #mobile-open-link-btn {
-      display: none;
-    }
-
-    #open-link-btn,
-    #mobile-open-link-btn {
-      background: transparent;
-      border: none;
-      color: #888;
-      padding: 0 2px;
-      font-size: 12px;
-      line-height: 1;
-      cursor: pointer;
-      opacity: 0.65;
-      transition: color 0.15s, opacity 0.15s;
-    }
-
-    #open-link-btn:hover,
-    #open-link-btn:focus-visible,
-    #mobile-open-link-btn:hover,
-    #mobile-open-link-btn:focus-visible {
-      color: #5b9bd5;
       opacity: 1;
     }
 
@@ -1593,12 +1577,8 @@
     body.light #detail-header { border-bottom: none; background: var(--rss-panel); }
     body.light #detail-title { color: var(--rss-text); }
     body.light #detail-meta { color: var(--rss-muted); }
-    body.light #open-link-btn,
-    body.light #mobile-open-link-btn { color: var(--rss-muted); }
-    body.light #open-link-btn:hover,
-    body.light #open-link-btn:focus-visible,
-    body.light #mobile-open-link-btn:hover,
-    body.light #mobile-open-link-btn:focus-visible { color: var(--rss-link); }
+    body.light #detail-title[href]:hover,
+    body.light #detail-title[href]:focus-visible { color: var(--rss-link); }
     body.light #detail-close-btn { border-color: var(--rss-border); color: var(--rss-muted); }
     body.light #detail-close-btn:hover { color: var(--rss-accent); border-color: var(--rss-accent); }
     body.light #detail-content { color: var(--rss-text); }
@@ -2160,19 +2140,6 @@
         line-height: 1.45;
         margin-top: 10px;
       }
-      body.mobile-detail-open #open-link-btn {
-        display: none;
-      }
-      body.mobile-detail-open #mobile-open-link-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: max-content;
-        margin-top: 8px;
-        padding: 4px 0;
-        font-size: 13px;
-        font-weight: 700;
-      }
       #detail-content {
         padding: 14px 14px 86px;
         font-size: 16px;
@@ -2378,12 +2345,10 @@
           <span id="detail-date"></span>
           <button id="detail-pin-badge" type="button" aria-pressed="false" data-tooltip="ピンを付ける" aria-label="ピンを付ける"><span class="pin-emoji"></span> ピン</button>
           <button id="detail-save-badge" type="button" aria-pressed="false" data-tooltip="Read It Laterに保存" aria-label="Read It Laterに保存">🔖 <span id="detail-save-label">保存</span></button>
-          <button id="open-link-btn" data-tooltip="別タブで開く" aria-label="別タブで開く">↗︎</button>
           <button id="detail-close-btn" data-tooltip="閉じる" data-tooltip-align="right" aria-label="閉じる">✕</button>
         </div>
       </div>
-      <div id="detail-title"></div>
-      <button id="mobile-open-link-btn" data-tooltip="別タブで開く" aria-label="別タブで開く">↗ 開く</button>
+      <a id="detail-title" target="_blank" rel="noopener noreferrer"></a>
     </div>
     <div id="detail-content" style="display:none"></div>
     <div id="focus-nav">
@@ -4183,7 +4148,15 @@ function showDetail(index) {
   header.style.display = 'block';
   content.style.display = 'block';
 
-  document.getElementById('detail-title').textContent = article.title;
+  const detailTitleEl = document.getElementById('detail-title');
+  detailTitleEl.textContent = article.title;
+  if (article.link && /^https?:\/\//i.test(article.link)) {
+    detailTitleEl.href = article.link;
+    detailTitleEl.setAttribute('aria-label', `${article.title}を別タブで開く`);
+  } else {
+    detailTitleEl.removeAttribute('href');
+    detailTitleEl.removeAttribute('aria-label');
+  }
   document.getElementById('detail-new-badge').style.display = newArticleLinks.has(article.link) ? '' : 'none';
   updateDetailActionButtons(article);
   const detailFeedNameEl = document.getElementById('detail-feed-name');
@@ -4232,9 +4205,7 @@ function showDetail(index) {
   // Scroll content to top
   content.scrollTop = 0;
 
-  // Store current link for open controls and the 'o' key.
-  document.getElementById('open-link-btn').dataset.url = article.link;
-  document.getElementById('mobile-open-link-btn').dataset.url = article.link;
+  // The title link and the 'o' shortcut both use the current article URL.
 }
 
 function sanitizeHTML(html) {
@@ -4699,9 +4670,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 function openCurrentArticle() {
-  const btn = document.getElementById('open-link-btn');
-  const mobileBtn = document.getElementById('mobile-open-link-btn');
-  const url = btn.dataset.url || mobileBtn.dataset.url;
+  const article = currentIndex >= 0 && currentIndex < filteredArticles.length ? filteredArticles[currentIndex] : null;
+  const url = article ? article.link : '';
   if (url && /^https?:\/\//i.test(url)) {
     window.open(url, '_blank', 'noopener,noreferrer');
   } else {
@@ -4912,8 +4882,6 @@ document.getElementById('paste-btn').addEventListener('click', async () => {
 document.getElementById('theme-btn').addEventListener('click', toggleTheme);
 document.getElementById('settings-theme-toggle-btn').addEventListener('click', toggleTheme);
 
-document.getElementById('open-link-btn').addEventListener('click', openCurrentArticle);
-document.getElementById('mobile-open-link-btn').addEventListener('click', openCurrentArticle);
 document.getElementById('detail-pin-badge').addEventListener('click', () => togglePin(currentIndex));
 document.getElementById('detail-save-badge').addEventListener('click', () => toggleSave(currentIndex));
 document.getElementById('pin-open-btn').addEventListener('click', openPinned);
