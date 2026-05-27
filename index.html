@@ -531,6 +531,34 @@
       background: rgba(233,69,96,0.22);
     }
 
+    #desktop-pull-refresh-handle {
+      display: none;
+      margin: 2px 8px 6px;
+      padding: 6px 8px;
+      border: 1px dashed rgba(91,155,213,0.28);
+      border-radius: 5px;
+      color: #7a8ba0;
+      background: rgba(15,52,96,0.22);
+      cursor: ns-resize;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      text-align: center;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #desktop-pull-refresh-handle:not([hidden]) {
+      display: block;
+    }
+
+    #desktop-pull-refresh-handle:hover,
+    #article-list.is-pulling #desktop-pull-refresh-handle {
+      border-color: rgba(233,69,96,0.52);
+      color: #d8dde6;
+      background: rgba(233,69,96,0.12);
+    }
+
     body.light #pull-refresh-indicator {
       background: var(--rss-panel-soft);
       border-color: var(--rss-border);
@@ -541,6 +569,19 @@
       background: var(--rss-accent-soft);
       border-color: var(--rss-accent);
       color: var(--rss-accent);
+    }
+
+    body.light #desktop-pull-refresh-handle {
+      border-color: var(--rss-border);
+      color: var(--rss-muted);
+      background: var(--rss-panel-soft);
+    }
+
+    body.light #desktop-pull-refresh-handle:hover,
+    body.light #article-list.is-pulling #desktop-pull-refresh-handle {
+      border-color: var(--rss-accent);
+      color: var(--rss-accent);
+      background: var(--rss-accent-soft);
     }
 
     .article-item {
@@ -2043,6 +2084,9 @@
         grid-column: 1 / -1;
         height: 0;
         margin: 0;
+      }
+      #desktop-pull-refresh-handle {
+        display: none !important;
       }
       #main.tile-mode .article-item,
       .article-item {
@@ -4017,6 +4061,11 @@ function renderArticleList() {
   pullIndicator.setAttribute('aria-live', 'polite');
   pullIndicator.textContent = '↓ 引っ張って更新';
   list.appendChild(pullIndicator);
+  const desktopPullHandle = document.createElement('div');
+  desktopPullHandle.id = 'desktop-pull-refresh-handle';
+  desktopPullHandle.textContent = '下にドラッグして更新';
+  desktopPullHandle.hidden = selectedFeedUrl !== null;
+  list.appendChild(desktopPullHandle);
 
   filteredArticles.forEach((article, index) => {
     const div = document.createElement('div');
@@ -4314,6 +4363,12 @@ function canPullRefreshArticleList(options = {}) {
     && list.scrollTop <= 0;
 }
 
+function updateDesktopPullRefreshHandle() {
+  const handle = document.getElementById('desktop-pull-refresh-handle');
+  if (!handle) return;
+  handle.hidden = selectedFeedUrl !== null;
+}
+
 function setPullRefreshIndicator(state, distance = 0) {
   const indicator = document.getElementById('pull-refresh-indicator');
   if (!indicator) return;
@@ -4425,7 +4480,7 @@ function initDesktopPullToRefresh() {
 
   const finishWheelPull = async () => {
     if (wheelRefreshing) return;
-    if (wheelDistance < PULL_REFRESH_THRESHOLD || !canPullRefreshArticleList()) {
+    if (wheelDistance < DESKTOP_PULL_REFRESH_THRESHOLD || !canPullRefreshArticleList()) {
       resetWheelPull();
       return;
     }
@@ -4441,6 +4496,10 @@ function initDesktopPullToRefresh() {
     tracking = true;
     startY = e.clientY;
     pullDistance = 0;
+    if (e.target.closest('#desktop-pull-refresh-handle')) {
+      list.classList.add('is-pulling');
+      e.preventDefault();
+    }
   });
 
   window.addEventListener('mousemove', e => {
@@ -4484,8 +4543,8 @@ function initDesktopPullToRefresh() {
   list.addEventListener('wheel', e => {
     if (isMobileViewport() || e.deltaY >= 0 || wheelRefreshing || !canPullRefreshArticleList()) return;
     const delta = Math.abs(e.deltaY) * (e.deltaMode === 1 ? 16 : 1);
-    wheelDistance = Math.min(PULL_REFRESH_THRESHOLD + 24, wheelDistance + delta);
-    setPullRefreshIndicator(wheelDistance >= PULL_REFRESH_THRESHOLD ? 'ready' : 'pulling', wheelDistance);
+    wheelDistance = Math.min(DESKTOP_PULL_REFRESH_THRESHOLD + 24, wheelDistance + delta);
+    setPullRefreshIndicator(wheelDistance >= DESKTOP_PULL_REFRESH_THRESHOLD ? 'ready' : 'pulling', wheelDistance);
     e.preventDefault();
     if (wheelTimer) window.clearTimeout(wheelTimer);
     wheelTimer = window.setTimeout(finishWheelPull, PULL_REFRESH_WHEEL_IDLE_MS);
