@@ -485,6 +485,19 @@
       padding: 4px 0;
     }
 
+    #article-list.is-pulling,
+    #article-list.is-pulling * {
+      cursor: ns-resize;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #article-list img {
+      -webkit-user-drag: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
     #pull-refresh-indicator {
       display: none;
       overflow: hidden;
@@ -2021,8 +2034,8 @@
       #article-list {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 8px;
-        padding: 8px 8px 18px;
+        gap: 0;
+        padding: 0 0 18px;
         align-content: start;
       }
       #pull-refresh-indicator {
@@ -2033,22 +2046,21 @@
       }
       #main.tile-mode .article-item,
       .article-item {
-        padding: 12px;
-        border-bottom: none;
-        border-radius: 6px;
-        border: 1px solid #2a3f5f;
-        background: #16213e;
+        padding: 12px 10px;
+        border: 0;
+        border-bottom: 1px solid #263852;
+        border-radius: 0;
+        background: transparent;
         display: flex;
         flex-direction: row;
         align-items: flex-start;
-        gap: 6px;
+        gap: 8px;
       }
-      .article-item:hover { background: #0f3460; border-color: #1a4a8a; }
+      .article-item:hover { background: rgba(15, 52, 96, 0.72); }
       .article-item.active {
-        border-color: #e94560;
-        border-width: 2px;
-        background: #1a1030;
-        box-shadow: 0 0 0 2px rgba(233,69,96,0.35), 0 4px 16px rgba(233,69,96,0.2);
+        border-bottom-color: #e94560;
+        background: rgba(233,69,96,0.12);
+        box-shadow: inset 3px 0 0 #e94560;
       }
       #main.tile-mode .article-item .article-title,
       .article-item .article-title {
@@ -2062,9 +2074,9 @@
       }
       .article-item .tile-thumbnail {
         width: 100%;
-        height: 120px;
+        height: 116px;
         object-fit: cover;
-        border-radius: 4px;
+        border-radius: 0;
         display: block;
       }
       .article-item .tile-snippet {
@@ -2117,12 +2129,12 @@
         order: 3;
       }
       .article-end { grid-column: 1 / -1; }
-      body.light .article-item { border-color: var(--rss-border); background: var(--rss-panel); }
-      body.light .article-item:hover { background: var(--rss-panel-soft); border-color: var(--rss-accent); }
+      body.light .article-item { border-bottom-color: var(--rss-border); background: transparent; }
+      body.light .article-item:hover { background: var(--rss-panel-soft); }
       body.light .article-item.active {
-        border-color: var(--rss-accent);
+        border-bottom-color: var(--rss-accent);
         background: var(--rss-panel-soft);
-        box-shadow: 0 0 0 2px rgba(201,58,78,0.18), 0 4px 14px rgba(42,39,35,0.14);
+        box-shadow: inset 3px 0 0 var(--rss-accent);
       }
       body.light .article-item .tile-snippet { color: var(--rss-muted); }
       body.light .tile-open-btn { color: var(--rss-accent); }
@@ -2575,7 +2587,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-05-25.ios-rest-read-v2';
+const APP_VERSION = '2026-05-27.rest-write-safe-sync';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
@@ -2672,31 +2684,15 @@ async function pushCloudState(reason = 'change') {
       profile_id: cloudConfig.profileId,
       url: feed.url,
       title: feed.title || '',
-      color: feed.color || COLORS[index % COLORS.length],
+      color: isSafeColor(feed.color) ? feed.color : COLORS[index % COLORS.length],
       updated_at: new Date().toISOString(),
     }));
-    const { error: deleteFeedsError } = await supabaseClient.from('rss_feeds').delete().eq('profile_id', cloudConfig.profileId);
-    if (deleteFeedsError) throw deleteFeedsError;
-    if (feedRows.length > 0) {
-      const { error } = await supabaseClient.from('rss_feeds').insert(feedRows);
-      if (error) throw error;
-    }
-
-    const { error: deletePinsError } = await supabaseClient.from('rss_pins').delete().eq('profile_id', cloudConfig.profileId);
-    if (deletePinsError) throw deletePinsError;
     const pinRows = [...pinnedUrls].filter(Boolean).map(url => ({ profile_id: cloudConfig.profileId, link: url }));
-    if (pinRows.length > 0) {
-      const { error } = await supabaseClient.from('rss_pins').insert(pinRows);
-      if (error) throw error;
-    }
-
-    const { error: deleteSavedError } = await supabaseClient.from('rss_saved_articles').delete().eq('profile_id', cloudConfig.profileId);
-    if (deleteSavedError) throw deleteSavedError;
     const savedRows = savedArticles.filter(article => article.link).map(serializeArticleForCloud);
-    if (savedRows.length > 0) {
-      const { error } = await supabaseClient.from('rss_saved_articles').insert(savedRows);
-      if (error) throw error;
-    }
+
+    await syncCloudTable('rss_feeds', feedRows, 'url', ['profile_id', 'url']);
+    await syncCloudTable('rss_pins', pinRows, 'link', ['profile_id', 'link']);
+    await syncCloudTable('rss_saved_articles', savedRows, 'link', ['profile_id', 'link']);
 
     const counts = await verifyCloudCounts({
       feeds: feedRows.length,
@@ -2734,7 +2730,7 @@ function getCloudHeaders(extra = {}) {
   };
 }
 
-async function cloudFetchJson(tableName, url, options = {}) {
+async function cloudFetch(tableName, url, options = {}) {
   let resp;
   try {
     resp = await fetch(url, {
@@ -2754,6 +2750,11 @@ async function cloudFetchJson(tableName, url, options = {}) {
     }
     throw new Error(`${tableName}: HTTP ${resp.status}${detail ? ` / ${detail}` : ''}`);
   }
+  return resp;
+}
+
+async function cloudFetchJson(tableName, url, options = {}) {
+  const resp = await cloudFetch(tableName, url, options);
   if (resp.status === 204) return [];
   return resp.json();
 }
@@ -2769,6 +2770,56 @@ function buildCloudSelectUrl(tableName, selectColumns, orderColumn = '') {
   params.set('profile_id', `eq.${cloudConfig.profileId}`);
   if (orderColumn) params.set('order', orderColumn);
   return `${getCloudRestBase()}/${tableName}?${params.toString()}`;
+}
+
+function buildCloudFilteredUrl(tableName, filters) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([column, value]) => {
+    params.set(column, `eq.${value}`);
+  });
+  return `${getCloudRestBase()}/${tableName}?${params.toString()}`;
+}
+
+async function deleteCloudRows(tableName, filters) {
+  await cloudFetch(tableName, buildCloudFilteredUrl(tableName, filters), {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+}
+
+async function upsertCloudRows(tableName, rows, conflictColumns) {
+  if (rows.length === 0) return;
+  const params = new URLSearchParams();
+  params.set('on_conflict', conflictColumns.join(','));
+  await cloudFetch(tableName, `${getCloudRestBase()}/${tableName}?${params.toString()}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify(rows),
+  });
+}
+
+async function syncCloudTable(tableName, rows, keyColumn, conflictColumns) {
+  await upsertCloudRows(tableName, rows, conflictColumns);
+  if (rows.length === 0) {
+    await deleteCloudRows(tableName, { profile_id: cloudConfig.profileId });
+    return;
+  }
+
+  const currentKeys = new Set(rows.map(row => String(row[keyColumn] || '')).filter(Boolean));
+  const existingRows = await runCloudSelect(tableName, buildCloudSelectUrl(tableName, keyColumn));
+  const staleKeys = existingRows
+    .map(row => String(row[keyColumn] || ''))
+    .filter(key => key && !currentKeys.has(key));
+
+  for (const staleKey of staleKeys) {
+    await deleteCloudRows(tableName, {
+      profile_id: cloudConfig.profileId,
+      [keyColumn]: staleKey,
+    });
+  }
 }
 
 async function verifyCloudCounts(expected) {
@@ -2801,7 +2852,7 @@ async function loadCloudState() {
       feeds = feedRows.map((row, index) => ({
         url: row.url,
         title: row.title || '',
-        color: row.color || COLORS[index % COLORS.length],
+        color: isSafeColor(row.color) ? row.color : COLORS[index % COLORS.length],
       })).filter(feed => /^https?:\/\//i.test(feed.url));
       saveFeeds({ skipCloud: true });
     }
@@ -3995,7 +4046,7 @@ function renderArticleList() {
     const newBadge = isNew ? '<span class="new-badge">NEW</span>' : '';
     if (shouldRenderTileArticles()) {
       const thumbHtml = article.image
-        ? `<img class="tile-thumbnail" src="${escapeHtml(article.image)}" loading="lazy" onerror="this.style.display='none'">`
+        ? `<img class="tile-thumbnail" src="${escapeHtml(article.image)}" loading="lazy" draggable="false" onerror="this.style.display='none'">`
         : '';
       const snippet = getTextSnippet(article.content, 80);
       div.innerHTML = `
@@ -4244,6 +4295,7 @@ const MOBILE_DETAIL_NAV_MARGIN = 8;
 const MOBILE_DETAIL_SWIPE_EDGE_WIDTH = 24;
 const MOBILE_DETAIL_SWIPE_BACK_DISTANCE = 72;
 const PULL_REFRESH_THRESHOLD = 70;
+const DESKTOP_PULL_REFRESH_THRESHOLD = 48;
 const PULL_REFRESH_WHEEL_IDLE_MS = 160;
 let suppressNextArticleClick = false;
 
@@ -4351,15 +4403,14 @@ function initDesktopPullToRefresh() {
   let tracking = false;
   let startY = 0;
   let pullDistance = 0;
-  let pointerId = null;
   let wheelDistance = 0;
   let wheelTimer = null;
   let wheelRefreshing = false;
 
   const cancelPull = () => {
     tracking = false;
-    pointerId = null;
     pullDistance = 0;
+    list.classList.remove('is-pulling');
     setPullRefreshIndicator('idle');
   };
 
@@ -4384,18 +4435,16 @@ function initDesktopPullToRefresh() {
     wheelRefreshing = false;
   };
 
-  list.addEventListener('pointerdown', e => {
-    if (isMobileViewport() || e.pointerType === 'touch' || e.button !== 0) return;
+  list.addEventListener('mousedown', e => {
+    if (isMobileViewport() || e.button !== 0) return;
     if (shouldIgnorePullStartTarget(e.target) || !canPullRefreshArticleList()) return;
     tracking = true;
-    pointerId = e.pointerId;
     startY = e.clientY;
     pullDistance = 0;
-    if (list.setPointerCapture) list.setPointerCapture(pointerId);
   });
 
-  list.addEventListener('pointermove', e => {
-    if (!tracking || e.pointerId !== pointerId) return;
+  window.addEventListener('mousemove', e => {
+    if (!tracking) return;
     if (isMobileViewport() || !canPullRefreshArticleList()) {
       cancelPull();
       return;
@@ -4407,16 +4456,17 @@ function initDesktopPullToRefresh() {
       return;
     }
     pullDistance = dy;
-    setPullRefreshIndicator(dy >= PULL_REFRESH_THRESHOLD ? 'ready' : 'pulling', dy);
-    if (dy > 8) e.preventDefault();
+    if (dy > 4) list.classList.add('is-pulling');
+    setPullRefreshIndicator(dy >= DESKTOP_PULL_REFRESH_THRESHOLD ? 'ready' : 'pulling', dy);
+    if (dy > 4) e.preventDefault();
   });
 
-  const finishPull = async e => {
-    if (!tracking || e.pointerId !== pointerId) return;
+  const finishPull = async () => {
+    if (!tracking) return;
     const shouldSuppressClick = pullDistance > 8;
-    const shouldRefresh = pullDistance >= PULL_REFRESH_THRESHOLD && canPullRefreshArticleList();
+    const shouldRefresh = pullDistance >= DESKTOP_PULL_REFRESH_THRESHOLD && canPullRefreshArticleList();
     tracking = false;
-    pointerId = null;
+    list.classList.remove('is-pulling');
     if (shouldSuppressClick) {
       suppressNextArticleClick = true;
       window.setTimeout(() => { suppressNextArticleClick = false; }, 250);
@@ -4428,8 +4478,8 @@ function initDesktopPullToRefresh() {
     await runPullRefreshFromGesture();
   };
 
-  list.addEventListener('pointerup', finishPull);
-  list.addEventListener('pointercancel', cancelPull);
+  window.addEventListener('mouseup', finishPull);
+  window.addEventListener('blur', cancelPull);
 
   list.addEventListener('wheel', e => {
     if (isMobileViewport() || e.deltaY >= 0 || wheelRefreshing || !canPullRefreshArticleList()) return;
