@@ -480,6 +480,7 @@
     #article-list {
       flex: 1;
       overflow-y: auto;
+      overscroll-behavior: contain;
       min-height: 0;
       padding: 4px 0;
     }
@@ -4243,6 +4244,7 @@ const MOBILE_DETAIL_NAV_MARGIN = 8;
 const MOBILE_DETAIL_SWIPE_EDGE_WIDTH = 24;
 const MOBILE_DETAIL_SWIPE_BACK_DISTANCE = 72;
 const PULL_REFRESH_THRESHOLD = 70;
+const PULL_REFRESH_WHEEL_IDLE_MS = 160;
 let suppressNextArticleClick = false;
 
 function isMobileViewport() {
@@ -4282,6 +4284,12 @@ function setPullRefreshIndicator(state, distance = 0) {
 
 function shouldIgnorePullStartTarget(target) {
   return !!target.closest('button, a, input, select, textarea, [contenteditable="true"]');
+}
+
+async function runPullRefreshFromGesture() {
+  setPullRefreshIndicator('refreshing');
+  await refreshAll();
+  setPullRefreshIndicator('idle');
 }
 
 function initMobilePullToRefresh() {
@@ -4325,9 +4333,7 @@ function initMobilePullToRefresh() {
       setPullRefreshIndicator('idle');
       return;
     }
-    setPullRefreshIndicator('refreshing');
-    await refreshAll();
-    setPullRefreshIndicator('idle');
+    await runPullRefreshFromGesture();
   };
 
   list.addEventListener('touchend', finishPull);
@@ -4346,12 +4352,36 @@ function initDesktopPullToRefresh() {
   let startY = 0;
   let pullDistance = 0;
   let pointerId = null;
+  let wheelDistance = 0;
+  let wheelTimer = null;
+  let wheelRefreshing = false;
 
   const cancelPull = () => {
     tracking = false;
     pointerId = null;
     pullDistance = 0;
     setPullRefreshIndicator('idle');
+  };
+
+  const resetWheelPull = () => {
+    wheelDistance = 0;
+    if (wheelTimer) {
+      window.clearTimeout(wheelTimer);
+      wheelTimer = null;
+    }
+    if (!wheelRefreshing) setPullRefreshIndicator('idle');
+  };
+
+  const finishWheelPull = async () => {
+    if (wheelRefreshing) return;
+    if (wheelDistance < PULL_REFRESH_THRESHOLD || !canPullRefreshArticleList()) {
+      resetWheelPull();
+      return;
+    }
+    wheelRefreshing = true;
+    wheelDistance = 0;
+    await runPullRefreshFromGesture();
+    wheelRefreshing = false;
   };
 
   list.addEventListener('pointerdown', e => {
@@ -4361,7 +4391,7 @@ function initDesktopPullToRefresh() {
     pointerId = e.pointerId;
     startY = e.clientY;
     pullDistance = 0;
-    list.setPointerCapture(pointerId);
+    if (list.setPointerCapture) list.setPointerCapture(pointerId);
   });
 
   list.addEventListener('pointermove', e => {
@@ -4395,13 +4425,21 @@ function initDesktopPullToRefresh() {
       setPullRefreshIndicator('idle');
       return;
     }
-    setPullRefreshIndicator('refreshing');
-    await refreshAll();
-    setPullRefreshIndicator('idle');
+    await runPullRefreshFromGesture();
   };
 
   list.addEventListener('pointerup', finishPull);
   list.addEventListener('pointercancel', cancelPull);
+
+  list.addEventListener('wheel', e => {
+    if (isMobileViewport() || e.deltaY >= 0 || wheelRefreshing || !canPullRefreshArticleList()) return;
+    const delta = Math.abs(e.deltaY) * (e.deltaMode === 1 ? 16 : 1);
+    wheelDistance = Math.min(PULL_REFRESH_THRESHOLD + 24, wheelDistance + delta);
+    setPullRefreshIndicator(wheelDistance >= PULL_REFRESH_THRESHOLD ? 'ready' : 'pulling', wheelDistance);
+    e.preventDefault();
+    if (wheelTimer) window.clearTimeout(wheelTimer);
+    wheelTimer = window.setTimeout(finishWheelPull, PULL_REFRESH_WHEEL_IDLE_MS);
+  }, { passive: false });
 }
 
 function closeMobileDetail() {
