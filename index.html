@@ -1907,8 +1907,8 @@
         order: 0;
         font-size: 18px;
       }
-      #mobile-feed-filter-toggle { order: 1; }
-      #mobile-pin-toggle { order: 2; }
+      #mobile-pin-toggle { order: 1; }
+      #mobile-feed-filter-toggle { order: 2; }
       #mobile-feed-input-toggle { order: 3; }
       #settings-btn { order: 4; }
       #loading-spinner { order: 5; }
@@ -2092,6 +2092,18 @@
         align-items: flex-start;
         gap: 8px;
       }
+      .article-item-main {
+        flex: 1;
+        min-width: 0;
+      }
+      .article-item.has-image .article-item-main {
+        --mobile-thumb-width: clamp(92px, 30vw, 112px);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) var(--mobile-thumb-width);
+        grid-template-rows: auto auto auto;
+        column-gap: 10px;
+        align-items: start;
+      }
       .article-item:hover { background: rgba(15, 52, 96, 0.72); }
       .article-item.active {
         border-bottom-color: #e94560;
@@ -2109,11 +2121,21 @@
         overflow: hidden;
       }
       .article-item .tile-thumbnail {
-        width: 100%;
-        height: 116px;
+        width: var(--mobile-thumb-width);
+        height: 78px;
         object-fit: cover;
-        border-radius: 0;
+        border-radius: 5px;
         display: block;
+        grid-column: 2;
+        grid-row: 1 / 4;
+        align-self: start;
+        background: #0f3460;
+      }
+      .article-item.has-image .article-title,
+      .article-item.has-image .tile-snippet,
+      .article-item.has-image .article-meta {
+        grid-column: 1;
+        min-width: 0;
       }
       .article-item .tile-snippet {
         font-size: 11px;
@@ -2339,8 +2361,8 @@
   </div>
   <button id="save-btn" data-tooltip="フィード設定を書き出す" aria-label="フィード設定をJSONファイルに保存">export</button>
   <button id="load-btn" data-tooltip="フィード設定を読み込む" aria-label="JSONファイルからフィード設定を読み込む">import</button>
-  <button id="mobile-feed-filter-toggle" data-tooltip="Feed" data-tooltip-align="right" aria-label="フィード選択を開く" aria-expanded="false">Feed</button>
   <button id="mobile-pin-toggle" data-tooltip="ピン記事はありません" data-tooltip-align="right" aria-label="ピン記事はありません">📍</button>
+  <button id="mobile-feed-filter-toggle" data-tooltip="Feed" data-tooltip-align="right" aria-label="フィード選択を開く" aria-expanded="false">Feed</button>
   <button id="mobile-feed-input-toggle" data-tooltip="URL入力" data-tooltip-align="right" aria-label="RSSフィードURL入力欄を開く" aria-expanded="false">URL</button>
   <button id="settings-btn" data-tooltip="設定" data-tooltip-align="right" aria-label="設定">⚙</button>
   <div id="mobile-feed-filter-wrapper">
@@ -4045,7 +4067,8 @@ function renderArticleList() {
     const isPinned = pinnedUrls.has(article.link);
     const isSaved = savedUrls.has(article.link);
     const isNew = newArticleLinks.has(article.link);
-    div.className = 'article-item' + (index === currentIndex ? ' active' : '') + (isPinned ? ' pinned' : '') + (isSaved ? ' saved' : '') + (isNew ? ' is-new' : '');
+    const hasImage = !!article.image;
+    div.className = 'article-item' + (index === currentIndex ? ' active' : '') + (isPinned ? ' pinned' : '') + (isSaved ? ' saved' : '') + (isNew ? ' is-new' : '') + (hasImage ? ' has-image' : '');
     div.dataset.index = index;
 
     const color = getFeedColor(article.feedUrl);
@@ -4068,7 +4091,7 @@ function renderArticleList() {
     const newBadge = isNew ? '<span class="new-badge">NEW</span>' : '';
     if (shouldRenderTileArticles()) {
       const thumbHtml = article.image
-        ? `<img class="tile-thumbnail" src="${escapeHtml(article.image)}" loading="lazy" draggable="false" onerror="this.style.display='none'">`
+        ? `<img class="tile-thumbnail" src="${escapeHtml(article.image)}" loading="lazy" draggable="false" onerror="this.style.display='none';var item=this.closest('.article-item');if(item)item.classList.remove('has-image');">`
         : '';
       const snippet = getTextSnippet(article.content, 80);
       div.innerHTML = `
