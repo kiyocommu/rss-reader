@@ -8,9 +8,9 @@
   <meta name="apple-mobile-web-app-title" content="RSS Reader">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>RSS Reader Cloud</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23e94560'/><circle cx='8' cy='24' r='3' fill='white'/><path d='M 5 18 A 9 9 0 0 1 14 27' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/><path d='M 5 10 A 17 17 0 0 1 22 27' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/></svg>">
-  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-v2-180.png">
-  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="./apple-touch-icon-v2-180.png">
+  <link rel="icon" type="image/svg+xml" href="./app-icon-feed.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="./app-icon-feed-180.png">
+  <link rel="apple-touch-icon-precomposed" sizes="180x180" href="./app-icon-feed-180.png">
   <link rel="manifest" href="./manifest.webmanifest">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -342,13 +342,42 @@
       color: #fff;
     }
     #rss-settings-modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
       padding: 10px 16px;
       border-top: 1px solid #1a3a6e;
-      text-align: right;
+    }
+    #cloud-sync-now-btn,
+    #rss-settings-save-btn {
+      min-width: 64px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1;
+      padding: 0 18px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #cloud-sync-now-btn {
+      background: transparent;
+      border: 1px solid #2b4f76;
+      color: #b0bdd0;
+    }
+    #cloud-sync-now-btn:hover {
+      background: #17284a;
+      border-color: #e94560;
+      color: #fff;
     }
     #rss-settings-save-btn {
-      background: #e94560; border: none; border-radius: 4px; color: white;
-      font-size: 13px; padding: 6px 18px; cursor: pointer;
+      background: #e94560;
+      border: 1px solid #e94560;
+      color: white;
     }
     #rss-settings-save-btn:hover { background: #c73550; }
 
@@ -1464,6 +1493,16 @@
     body.light #rss-custom-proxy-input { background: var(--rss-bg); border-color: var(--rss-border); color: var(--rss-text); }
     body.light #rss-custom-proxy-input:focus { border-color: var(--rss-accent); }
     body.light #rss-custom-proxy-input::placeholder { color: var(--rss-muted); }
+    body.light #cloud-sync-now-btn {
+      background: transparent;
+      border-color: var(--rss-border);
+      color: var(--rss-muted);
+    }
+    body.light #cloud-sync-now-btn:hover {
+      background: var(--rss-accent-soft);
+      border-color: var(--rss-accent);
+      color: var(--rss-accent);
+    }
     body.light #rss-settings-save-btn { background: var(--rss-accent); color: #fff; }
     body.light #rss-settings-save-btn:hover { background: #526792; }
     body.light .resizer { background: var(--rss-panel); }
@@ -1811,39 +1850,6 @@
       color: var(--rss-accent);
     }
 
-    /* ---- Title glitch (dark mode, hover only) ---- */
-    @keyframes rss-glitch1 {
-      0%, 100% { clip-path: inset(10% 0 80% 0); transform: translate(-3px, 0); }
-      33%       { clip-path: inset(50% 0 30% 0); transform: translate(3px, 0); }
-      66%       { clip-path: inset(75% 0 10% 0); transform: translate(-2px, 0); }
-    }
-    @keyframes rss-glitch2 {
-      0%, 100% { clip-path: inset(70% 0 15% 0); transform: translate(3px, 0); }
-      33%       { clip-path: inset(20% 0 60% 0); transform: translate(-3px, 0); }
-      66%       { clip-path: inset(45% 0 40% 0); transform: translate(2px, 0); }
-    }
-    body:not(.light) #site-title { position: relative; }
-    body:not(.light) #site-title::before,
-    body:not(.light) #site-title::after {
-      content: attr(data-text);
-      position: absolute;
-      top: 0; left: 0;
-      font-size: inherit;
-      font-weight: inherit;
-      white-space: nowrap;
-      clip-path: inset(50% 0 50% 0);
-    }
-    body:not(.light) #site-title:hover::before {
-      color: #00c8ff;
-      animation: rss-glitch1 0.45s steps(1) infinite;
-      animation-delay: -0.15s;
-    }
-    body:not(.light) #site-title:hover::after {
-      color: #f0c040;
-      animation: rss-glitch2 0.45s steps(1) infinite;
-      animation-delay: -0.3s;
-    }
-
     .cloud-settings-grid {
       display: grid;
       gap: 12px;
@@ -1942,6 +1948,15 @@
         opacity: 0.48;
         filter: grayscale(1);
       }
+      #rss-settings-modal-footer {
+        padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+      }
+      #cloud-sync-now-btn,
+      #rss-settings-save-btn {
+        min-width: 68px;
+        height: 44px;
+        padding: 0 18px;
+      }
       #save-btn,
       #load-btn,
       #shortcuts,
@@ -2009,10 +2024,53 @@
         align-content: start;
       }
       #pull-refresh-indicator {
-        display: block;
+        --pull-refresh-height: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         grid-column: 1 / -1;
         height: 0;
         margin: 0;
+        opacity: 0;
+        transition: height 0.16s ease, opacity 0.16s ease;
+      }
+      #article-list.at-scroll-top #pull-refresh-indicator,
+      #pull-refresh-indicator.visible {
+        display: flex;
+        height: var(--pull-refresh-height);
+        opacity: 1;
+      }
+      #pull-refresh-indicator::before {
+        content: "";
+        display: block;
+        width: 34px;
+        height: 3px;
+        border-radius: 999px;
+        background: #2b4f76;
+        opacity: 0.82;
+        transition: width 0.16s ease, background 0.16s ease, opacity 0.16s ease, box-shadow 0.16s ease;
+      }
+      #pull-refresh-indicator.visible::before {
+        width: 42px;
+        background: #5b7fb4;
+        opacity: 1;
+      }
+      #pull-refresh-indicator.ready::before,
+      #pull-refresh-indicator.refreshing::before {
+        width: 48px;
+        background: #e94560;
+        box-shadow: 0 0 12px rgba(233, 69, 96, 0.34);
+      }
+      body.light #pull-refresh-indicator::before {
+        background: var(--rss-border);
+      }
+      body.light #pull-refresh-indicator.visible::before {
+        background: var(--rss-muted);
+      }
+      body.light #pull-refresh-indicator.ready::before,
+      body.light #pull-refresh-indicator.refreshing::before {
+        background: var(--rss-accent);
+        box-shadow: 0 0 10px rgba(107, 127, 174, 0.28);
       }
       #main.tile-mode .article-item,
       .article-item {
@@ -2263,7 +2321,7 @@
 <body>
 
 <div id="header">
-  <h1 id="site-title" data-text="RSS Reader Cloud" title="全フィードを更新 (r)" style="cursor:pointer;">RSS Reader <span id="site-refresh-mark" aria-hidden="true">⟳</span></h1>
+  <h1 id="site-title" title="全フィードを更新 (r)" style="cursor:pointer;">RSS Reader <span id="site-refresh-mark" aria-hidden="true">⟳</span></h1>
   <span id="cloud-status" class="cloud-status-pill">local</span>
   <span id="loading-spinner" class="spinner" style="display:none;"></span>
   <div id="feed-input-wrapper">
@@ -2273,10 +2331,10 @@
   </div>
   <button id="save-btn" data-tooltip="フィード設定を書き出す" aria-label="フィード設定をJSONファイルに保存">export</button>
   <button id="load-btn" data-tooltip="フィード設定を読み込む" aria-label="JSONファイルからフィード設定を読み込む">import</button>
-  <button id="settings-btn" data-tooltip="設定" data-tooltip-align="right" aria-label="設定">⚙</button>
-  <button id="mobile-feed-input-toggle" data-tooltip="URL入力" data-tooltip-align="right" aria-label="RSSフィードURL入力欄を開く" aria-expanded="false">URL</button>
   <button id="mobile-feed-filter-toggle" data-tooltip="Feed" data-tooltip-align="right" aria-label="フィード選択を開く" aria-expanded="false">Feed</button>
   <button id="mobile-pin-toggle" data-tooltip="ピン記事はありません" data-tooltip-align="right" aria-label="ピン記事はありません">📍</button>
+  <button id="mobile-feed-input-toggle" data-tooltip="URL入力" data-tooltip-align="right" aria-label="RSSフィードURL入力欄を開く" aria-expanded="false">URL</button>
+  <button id="settings-btn" data-tooltip="設定" data-tooltip-align="right" aria-label="設定">⚙</button>
   <div id="mobile-feed-filter-wrapper">
     <select id="mobile-feed-filter-select" aria-label="フィードで絞り込み"></select>
   </div>
@@ -2542,7 +2600,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-05-27.rest-write-safe-sync';
+const APP_VERSION = '2026-05-27.mobile-list-top-marker';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
@@ -3972,6 +4030,7 @@ function renderArticleList() {
   pullIndicator.setAttribute('aria-hidden', 'true');
   pullIndicator.textContent = '';
   list.appendChild(pullIndicator);
+  updateArticleListTopState();
 
   filteredArticles.forEach((article, index) => {
     const div = document.createElement('div');
@@ -4275,13 +4334,27 @@ function canPullRefreshArticleList(options = {}) {
     && list.scrollTop <= 0;
 }
 
+function updateArticleListTopState() {
+  const list = document.getElementById('article-list');
+  if (!list) return;
+  const canShowTopMark = isMobileViewport()
+    && selectedFeedUrl === null
+    && !document.body.classList.contains('mobile-detail-open')
+    && list.scrollTop <= 1;
+  list.classList.toggle('at-scroll-top', canShowTopMark);
+}
+
 function setPullRefreshIndicator(state, distance = 0) {
   const indicator = document.getElementById('pull-refresh-indicator');
   if (!indicator) return;
-  indicator.classList.toggle('visible', false);
+  const active = state !== 'idle';
+  const height = active ? Math.max(12, Math.min(44, Math.round(distance * 0.32))) : 12;
+  indicator.style.setProperty('--pull-refresh-height', `${height}px`);
+  indicator.classList.toggle('visible', active);
   indicator.classList.toggle('ready', state === 'ready');
+  indicator.classList.toggle('refreshing', state === 'refreshing');
   indicator.textContent = '';
-  indicator.style.height = '';
+  updateArticleListTopState();
 }
 
 function shouldIgnorePullStartTarget(target) {
@@ -4344,6 +4417,9 @@ function initMobilePullToRefresh() {
     pullDistance = 0;
     setPullRefreshIndicator('idle');
   });
+  list.addEventListener('scroll', updateArticleListTopState, { passive: true });
+  window.addEventListener('resize', updateArticleListTopState);
+  updateArticleListTopState();
 }
 
 function initDesktopPullToRefresh() {
