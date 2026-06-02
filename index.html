@@ -823,6 +823,16 @@
     body.focus-mode #detail-header { padding: 48px max(60px, 12%) 24px; }
     body.focus-mode #detail-title { font-size: 26px; }
     body.focus-mode #detail-content { padding: 24px max(60px, 12%) 80px; }
+    body.focus-mode #main.tile-mode #detail-panel {
+      width: auto;
+      flex: 1 1 auto;
+      flex-shrink: 1;
+      display: flex;
+    }
+    body.focus-mode #main.tile-mode #detail-panel.tile-hidden { display: flex; }
+    body.focus-mode #main.tile-mode #detail-header { padding: 48px max(60px, 12%) 24px; }
+    body.focus-mode #main.tile-mode #detail-title { font-size: 26px; margin: 16px 0 0; }
+    body.focus-mode #main.tile-mode #detail-content { padding: 24px max(60px, 12%) 80px; }
     #focus-nav {
       display: none;
       position: fixed;
@@ -2971,8 +2981,29 @@ let viewMode = 'list'; // 'list' | 'tile'
 let focusMode = false;
 
 function toggleFocusMode() {
-  focusMode = !focusMode;
-  document.body.classList.toggle('focus-mode', focusMode);
+  const detailPanel = document.getElementById('detail-panel');
+
+  if (!focusMode) {
+    if (currentIndex < 0 || currentIndex >= filteredArticles.length) {
+      showStatus('記事を選択してください');
+      return;
+    }
+    if (detailPanel) detailPanel.classList.remove('tile-hidden');
+    showDetail(currentIndex);
+    focusMode = true;
+    document.body.classList.add('focus-mode');
+    return;
+  }
+
+  focusMode = false;
+  document.body.classList.remove('focus-mode');
+  if (detailPanel) {
+    if (viewMode === 'tile' && (currentIndex < 0 || currentIndex >= filteredArticles.length)) {
+      detailPanel.classList.add('tile-hidden');
+    } else {
+      detailPanel.classList.remove('tile-hidden');
+    }
+  }
 }
 
 let allArticles = (() => {
