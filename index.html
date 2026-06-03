@@ -393,12 +393,15 @@
 
     .resizer {
       width: 3px;
-      background: transparent;
+      background: #202840;
       cursor: col-resize;
       flex-shrink: 0;
-      transition: background 0.15s;
+      transition: background 0.15s, box-shadow 0.15s;
     }
-    .resizer:hover, .resizer.dragging { background: #e94560; }
+    .resizer:hover, .resizer.dragging {
+      background: #5b7fb4;
+      box-shadow: 0 0 0 1px rgba(91, 127, 180, 0.2);
+    }
 
     /* フィードタイトルバー（記事パネル上部） */
     #feed-title-bar {
@@ -944,13 +947,13 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      background: #1a1a2e;
+      background: #26304a;
     }
 
     #detail-header {
       padding: 30px 36px 12px;
       border-bottom: none;
-      background: #16213e;
+      background: #2d3956;
       flex-shrink: 0;
     }
 
@@ -961,7 +964,7 @@
       line-height: 1.4;
       margin-top: 16px;
       margin-bottom: 0;
-      color: #fff;
+      color: #f3f6fb;
       text-decoration: none;
     }
 
@@ -974,7 +977,7 @@
 
     #detail-meta {
       font-size: 12px;
-      color: #888;
+      color: #9daabd;
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
@@ -989,7 +992,7 @@
       max-width: 100%;
     }
 
-    #detail-feed-name { color: #e94560; font-weight: 600; }
+    #detail-feed-name { color: #ff6f86; font-weight: 600; }
 
     #mobile-detail-back-btn {
       display: none;
@@ -999,18 +1002,18 @@
       width: 22px;
       height: 22px;
       padding: 0;
-      border: 1px solid #2b4f76;
+      border: 1px solid #394d70;
       border-radius: 4px;
       background: transparent;
-      color: #7a8ba0;
+      color: #9daabd;
       cursor: pointer;
       font-size: 14px;
       line-height: 1;
       transition: background 0.15s, border-color 0.15s, color 0.15s;
     }
     #mobile-detail-back-btn:hover {
-      border-color: #c8d6e5;
-      color: #c8d6e5;
+      border-color: #d5dfec;
+      color: #f3f6fb;
     }
 
     #detail-action-row {
@@ -1025,9 +1028,9 @@
       align-items: center;
       gap: 3px;
       background: transparent;
-      border: 1px solid #2b4f76;
+      border: 1px solid #394d70;
       border-radius: 4px;
-      color: #7a8ba0;
+      color: #9daabd;
       cursor: pointer;
       filter: grayscale(1);
       font: inherit;
@@ -1041,8 +1044,8 @@
     #detail-pin-badge:hover,
     #detail-save-badge:hover {
       background: transparent;
-      border-color: #3d5f84;
-      color: #a7bdd3;
+      border-color: #567098;
+      color: #d5dfec;
       filter: grayscale(0.35);
       opacity: 0.82;
     }
@@ -1050,17 +1053,17 @@
       min-width: 45px;
     }
     #detail-pin-badge.active {
-      background: #f0e04022;
-      border-color: #f0e040aa;
-      color: #f0e040;
+      background: rgba(240, 224, 64, 0.12);
+      border-color: rgba(240, 224, 64, 0.68);
+      color: #f3e76a;
       filter: none;
       opacity: 1;
       box-shadow: 0 0 8px #f0e04055;
     }
     #detail-save-badge.active {
-      background: rgba(91,155,213,0.15);
-      border-color: rgba(91,155,213,0.6);
-      color: #5b9bd5;
+      background: rgba(91,155,213,0.16);
+      border-color: rgba(91,155,213,0.68);
+      color: #7db8ec;
       filter: none;
       opacity: 1;
     }
@@ -1068,16 +1071,16 @@
     #detail-close-btn {
       display: none;
       background: none;
-      border: 1px solid #444;
+      border: 1px solid #394d70;
       border-radius: 3px;
-      color: #888;
+      color: #9daabd;
       padding: 1px 4px;
       font-size: 11px;
       line-height: 1;
       cursor: pointer;
       transition: color 0.15s, border-color 0.15s;
     }
-    #detail-close-btn:hover { color: #e94560; border-color: #e94560; }
+    #detail-close-btn:hover { color: #ff6f86; border-color: #ff6f86; }
     #main.tile-mode #detail-close-btn { display: inline-block; }
 
     #detail-content {
@@ -1086,7 +1089,7 @@
       padding: 32px 40px 16px;
       line-height: 1.7;
       font-size: 15px;
-      color: #ccc;
+      color: #d7deea;
     }
 
     #detail-content img {
@@ -1098,10 +1101,10 @@
       display: block;
     }
 
-    #detail-content a { color: #5b9bd5; }
+    #detail-content a { color: #7db8ec; }
     #detail-content p { margin-bottom: 12px; }
     #detail-content h1, #detail-content h2, #detail-content h3 {
-      color: #e0e0e0;
+      color: #f0f3f8;
       margin: 16px 0 8px;
     }
 
@@ -1546,8 +1549,15 @@
     }
     body.light #rss-settings-save-btn { background: var(--rss-accent); color: #fff; }
     body.light #rss-settings-save-btn:hover { background: #526792; }
-    body.light .resizer { background: transparent; }
-    body.light .resizer:hover, body.light .resizer.dragging { background: var(--rss-accent); }
+    body.light #main > .resizer {
+      background: transparent;
+      box-shadow: none;
+    }
+    body.light #main > .resizer:hover,
+    body.light #main > .resizer.dragging {
+      background: var(--rss-accent);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--rss-accent) 20%, transparent);
+    }
     body.light #feed-title-bar { background: var(--rss-panel-soft); border-bottom: none; }
     body.light #feed-link-btn,
     body.light #feed-refresh-btn,
