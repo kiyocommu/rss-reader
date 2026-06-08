@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RSS Reader - ブックマークレット設定</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .container { max-width: 680px; width: 100%; }
+    h1 { font-size: 22px; color: #e94560; margin-bottom: 8px; }
+    .subtitle { font-size: 14px; color: #999; margin-bottom: 32px; line-height: 1.7; }
+    .step {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .step-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: #e94560;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    h2 { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+    p, li { font-size: 14px; color: #aaa; line-height: 1.7; }
+    ul { margin-top: 10px; padding-left: 20px; }
+    .bookmarklet-link {
+      display: inline-block;
+      margin-top: 14px;
+      background: #e94560;
+      color: #fff;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: grab;
+      user-select: none;
+    }
+    .bookmarklet-link:hover { background: #c73650; }
+    .note { font-size: 12px; color: #777; margin-top: 10px; }
+    .flow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .flow-item {
+      background: #0f3460;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 13px;
+      color: #c8d6e5;
+    }
+    .flow-arrow { color: #e94560; font-size: 18px; }
+    kbd {
+      background: #0f3460;
+      border: 1px solid #1a4a8a;
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+    code {
+      background: #0f3460;
+      border: 1px solid #1a4a8a;
+      border-radius: 4px;
+      padding: 2px 5px;
+      color: #c8d6e5;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>RSS Reader ブックマークレット設定</h1>
+  <p class="subtitle">Webサイトを見ながら、ワンクリックでRSS ReaderにRSSフィードを追加できるようにします。</p>
+
+  <div class="step">
+    <div class="step-num">Step 1</div>
+    <h2>ブックマークバーを表示する</h2>
+    <p>Chromeのブックマークバーが非表示の場合は、<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> で表示してください。</p>
+  </div>
+
+  <div class="step">
+    <div class="step-num">Step 2</div>
+    <h2>ボタンをブックマークバーにドラッグする</h2>
+    <p>下のボタンをドラッグして、ブラウザのブックマークバーに追加してください。</p>
+    <a id="bookmarklet-link" class="bookmarklet-link" href="#">📡 RSS Readerに追加</a>
+    <p class="note">※ ドラッグできない場合は、右クリックしてブックマークとして保存し、URL欄に生成済みの <code>javascript:</code> から始まる文字列が入っていることを確認してください。</p>
+  </div>
+
+  <div class="step">
+    <div class="step-num">Step 3</div>
+    <h2>使い方</h2>
+    <p>設定後は、RSSを追加したいページでブックマークレットをクリックします。</p>
+    <div class="flow">
+      <div class="flow-item">追加したいサイトを開く</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item">📡 RSS Readerに追加</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item">RSS Readerが開く</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item">フィードが自動追加される</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">補足</div>
+    <h2>RSSフィードが見つからない場合</h2>
+    <p>ページ内のRSSリンクを検出できないサイトでは、以下を試してください。</p>
+    <ul>
+      <li>サイトURLの末尾に <kbd>/feed</kbd> や <kbd>/rss</kbd> を付けてRSS Readerに直接入力する</li>
+      <li>「サイト名 RSS」で検索してフィードURLを探す</li>
+      <li>RSS ReaderのURL入力欄には、RSSフィードURLだけでなくサイトURLも入力できます</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+(function () {
+  const readerUrl = new URL('index.html', location.href).href;
+  const code = `(function(){var reader=${JSON.stringify(readerUrl)};var links=document.querySelectorAll('link[type="application/rss+xml"],link[type="application/atom+xml"],link[rel="alternate"][type*="rss"],link[rel="alternate"][type*="atom"]');function openFeed(url){window.open(reader+'?add='+encodeURIComponent(url),'_blank','noopener');}if(!links.length){if(confirm('このページにRSSフィードリンクが見つかりませんでした。ページURLをRSS Readerに送りますか？'))openFeed(location.href);return;}if(links.length===1){openFeed(links[0].href);return;}var ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2147483646;display:flex;align-items:center;justify-content:center;font-family:sans-serif';var bx=document.createElement('div');bx.style.cssText='background:#1a1a2e;border:2px solid #e94560;border-radius:8px;padding:16px;min-width:300px;max-width:90vw;box-shadow:0 4px 24px rgba(0,0,0,.8)';var ttl=document.createElement('div');ttl.style.cssText='color:#e0e0e0;font-size:13px;font-weight:bold;margin-bottom:10px';ttl.textContent='フィードを選択してください:';bx.appendChild(ttl);for(var i=0;i<links.length;i++){(function(lnk){var bt=document.createElement('div');bt.style.cssText='padding:8px 12px;margin-bottom:6px;background:#0f3460;border-radius:4px;cursor:pointer;color:#a8c0e8;font-size:13px;word-break:break-all';bt.textContent=lnk.title||lnk.href;if(lnk.title){var sp=document.createElement('div');sp.style.cssText='color:#5a8ab0;font-size:11px;margin-top:2px';sp.textContent=lnk.href;bt.appendChild(sp);}bt.onmouseover=function(){this.style.background='#1a4a8a'};bt.onmouseout=function(){this.style.background='#0f3460'};bt.onclick=function(){ov.remove();openFeed(lnk.href)};bx.appendChild(bt)})(links[i])}var cl=document.createElement('div');cl.style.cssText='text-align:right;margin-top:8px';var cs=document.createElement('span');cs.style.cssText='color:#7a8ba0;cursor:pointer;font-size:12px';cs.textContent='キャンセル';cs.onclick=function(){ov.remove()};cl.appendChild(cs);bx.appendChild(cl);ov.appendChild(bx);ov.onclick=function(e){if(e.target===ov)ov.remove()};document.body.appendChild(ov);})()`;
+  document.getElementById('bookmarklet-link').href = 'javascript:' + code;
+})();
+</script>
+</body>
+</html>

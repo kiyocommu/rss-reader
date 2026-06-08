@@ -1,17 +1,23 @@
 {
-  "name": "RSS Reader Cloud",
+  "name": "RSS Reader",
   "short_name": "RSS Reader",
-  "description": "RSS Reader Cloud",
+  "description": "RSS Reader",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#16213e",
-  "theme_color": "#e94560",
+  "theme_color": "#64779f",
   "icons": [
     {
-      "src": "./apple-touch-icon.png",
+      "src": "./icons/app-icon-feed-512.png?v=2026-06-02-blue",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/app-icon-feed-180.png?v=2026-06-02-blue",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
