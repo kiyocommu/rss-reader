@@ -61,49 +61,6 @@
       flex-shrink: 0;
     }
 
-    .mobile-rss-logo-mark {
-      position: relative;
-      display: none;
-      width: 30px;
-      height: 30px;
-      color: #fff;
-      background: #64779f;
-      border-radius: 7px;
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
-    }
-
-    .mobile-rss-logo-mark::before,
-    .mobile-rss-logo-mark::after {
-      content: "";
-      position: absolute;
-      left: 7px;
-      bottom: 7px;
-      border: 3px solid currentColor;
-      border-left-color: transparent;
-      border-bottom-color: transparent;
-      border-radius: 50%;
-    }
-
-    .mobile-rss-logo-mark::before {
-      width: 10px;
-      height: 10px;
-    }
-
-    .mobile-rss-logo-mark::after {
-      width: 18px;
-      height: 18px;
-    }
-
-    .mobile-rss-logo-dot {
-      position: absolute;
-      left: 7px;
-      bottom: 7px;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentColor;
-    }
-
     #site-title:hover #site-refresh-mark {
       color: #fff;
       transform: translateY(-1px) rotate(24deg);
@@ -2097,17 +2054,10 @@
       }
       #header #site-title {
         order: 0;
-        width: 38px;
-        height: 34px;
-        justify-content: center;
         font-size: 18px;
       }
-      #site-title-text,
       #site-refresh-mark {
-        display: none;
-      }
-      .mobile-rss-logo-mark {
-        display: block;
+        font-size: 15px;
       }
       #mobile-pin-toggle { order: 1; margin-left: auto; }
       #mobile-feed-filter-toggle { order: 2; }
@@ -2578,7 +2528,7 @@
 <body>
 
 <div id="header">
-  <h1 id="site-title" title="全フィードを更新 (r)" style="cursor:pointer;" aria-label="RSS Reader 全フィードを更新"><span id="site-title-text">RSS Reader</span><span id="site-refresh-mark" aria-hidden="true">⟳</span><span class="mobile-rss-logo-mark" aria-hidden="true"><span class="mobile-rss-logo-dot"></span></span></h1>
+  <h1 id="site-title" title="全フィードを更新 (r)" style="cursor:pointer;" aria-label="RSS Reader 全フィードを更新">RSS Reader <span id="site-refresh-mark" aria-hidden="true">⟳</span></h1>
   <span id="cloud-status" class="cloud-status-pill">local</span>
   <span id="loading-spinner" class="spinner" style="display:none;"></span>
   <div id="feed-input-wrapper">
@@ -2860,7 +2810,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-06-16.mobile-logo-mark';
+const APP_VERSION = '2026-06-16.mobile-text-logo';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
