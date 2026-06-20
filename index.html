@@ -2091,14 +2091,15 @@
         font-size: 14px;
         padding: 10px 12px;
       }
+      #settings-btn,
       #mobile-feed-input-toggle,
       #mobile-feed-filter-toggle,
       #mobile-pin-toggle {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 34px;
-        padding: 7px 11px;
+        height: 30px;
+        padding: 5px 10px;
         font-size: 13px;
       }
       body.mobile-feed-input-open #mobile-feed-input-toggle,
@@ -2813,7 +2814,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-06-18.mobile-article-actions-compact';
+const APP_VERSION = '2026-06-20.mobile-header-button-height';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
