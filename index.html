@@ -775,7 +775,7 @@
       justify-content: space-between;
       margin-top: auto;
     }
-    #main.tile-mode .article-actions { flex-direction: row; gap: 0; }
+    #main.tile-mode .article-actions { flex-direction: row; gap: 4px; }
 
     /* View mode toggle button */
     #view-toggle-btn {
@@ -863,8 +863,26 @@
       line-height: 1.4;
     }
     #main.tile-mode .article-end { grid-column: 1 / -1; }
-    #main.tile-mode .tile-open-btn { display: inline-block; font-size: 10px; color: #4a7aaa; text-decoration: none; margin-top: 2px; align-self: flex-start; }
-    #main.tile-mode .tile-open-btn:hover { color: #e94560; }
+    #main.tile-mode .tile-open-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      min-width: 22px;
+      height: 22px;
+      padding: 0;
+      border: 1px solid #2b4f76;
+      border-radius: 4px;
+      background: transparent;
+      color: #4a7aaa;
+      font-size: 12px;
+      line-height: 1;
+      text-decoration: none;
+    }
+    #main.tile-mode .tile-open-btn:hover {
+      border-color: #e94560;
+      color: #e94560;
+    }
 
     @media (min-width: 761px) {
       #main.tile-mode #pull-refresh-indicator {
@@ -2814,7 +2832,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-06-20.mobile-header-button-height';
+const APP_VERSION = '2026-06-20.desktop-tile-action-gap';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
