@@ -885,6 +885,28 @@
     }
 
     @media (min-width: 761px) {
+      #main.tile-mode #article-list {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        padding: 10px;
+        gap: 10px;
+      }
+      #main.tile-mode .article-item {
+        height: 315px;
+        padding: 14px;
+        gap: 7px;
+      }
+      #main.tile-mode .article-item .article-title {
+        font-size: 15px;
+      }
+      #main.tile-mode .article-item .tile-thumbnail {
+        height: 144px;
+      }
+      #main.tile-mode .article-item .tile-snippet {
+        font-size: 12px;
+      }
+      #main.tile-mode .article-item .article-meta {
+        font-size: 11px;
+      }
       #main.tile-mode #pull-refresh-indicator {
         --pull-refresh-height: 16px;
         display: flex;
@@ -2832,7 +2854,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-06-20.desktop-tile-action-gap';
+const APP_VERSION = '2026-06-22.desktop-tile-fixed-height';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
