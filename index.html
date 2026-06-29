@@ -775,7 +775,7 @@
       justify-content: space-between;
       margin-top: auto;
     }
-    #main.tile-mode .article-actions { flex-direction: row; gap: 0; }
+    #main.tile-mode .article-actions { flex-direction: row; gap: 4px; }
 
     /* View mode toggle button */
     #view-toggle-btn {
@@ -863,10 +863,50 @@
       line-height: 1.4;
     }
     #main.tile-mode .article-end { grid-column: 1 / -1; }
-    #main.tile-mode .tile-open-btn { display: inline-block; font-size: 10px; color: #4a7aaa; text-decoration: none; margin-top: 2px; align-self: flex-start; }
-    #main.tile-mode .tile-open-btn:hover { color: #e94560; }
+    #main.tile-mode .tile-open-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      min-width: 22px;
+      height: 22px;
+      padding: 0;
+      border: 1px solid #2b4f76;
+      border-radius: 4px;
+      background: transparent;
+      color: #4a7aaa;
+      font-size: 12px;
+      line-height: 1;
+      text-decoration: none;
+    }
+    #main.tile-mode .tile-open-btn:hover {
+      border-color: #e94560;
+      color: #e94560;
+    }
 
     @media (min-width: 761px) {
+      #main.tile-mode #article-list {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        padding: 10px;
+        gap: 10px;
+      }
+      #main.tile-mode .article-item {
+        height: 315px;
+        padding: 14px;
+        gap: 7px;
+      }
+      #main.tile-mode .article-item .article-title {
+        font-size: 15px;
+      }
+      #main.tile-mode .article-item .tile-thumbnail {
+        height: 144px;
+      }
+      #main.tile-mode .article-item .tile-snippet {
+        font-size: 12px;
+      }
+      #main.tile-mode .article-item .article-meta {
+        font-size: 11px;
+      }
       #main.tile-mode #pull-refresh-indicator {
         --pull-refresh-height: 16px;
         display: flex;
@@ -2091,14 +2131,15 @@
         font-size: 14px;
         padding: 10px 12px;
       }
+      #settings-btn,
       #mobile-feed-input-toggle,
       #mobile-feed-filter-toggle,
       #mobile-pin-toggle {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 34px;
-        padding: 7px 11px;
+        height: 30px;
+        padding: 5px 10px;
         font-size: 13px;
       }
       body.mobile-feed-input-open #mobile-feed-input-toggle,
@@ -2813,7 +2854,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-06-18.mobile-article-actions-compact';
+const APP_VERSION = '2026-06-22.desktop-tile-fixed-height';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
