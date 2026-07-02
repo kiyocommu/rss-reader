@@ -425,7 +425,7 @@
       white-space: nowrap;
     }
 
-    #feed-refresh-btn, #feed-delete-btn, #feed-link-btn {
+    #feed-refresh-btn, #feed-delete-btn, #feed-link-btn, #feed-folder-btn {
       background: none;
       border: none;
       color: #666;
@@ -440,9 +440,13 @@
       transition: opacity 0.15s, color 0.15s;
     }
 
+    #feed-folder-btn { font-size: 13px; filter: grayscale(1) brightness(1.15); }
+    #feed-folder-btn:hover { filter: none; }
+
     #feed-title-bar:hover #feed-refresh-btn,
     #feed-title-bar:hover #feed-delete-btn,
-    #feed-title-bar:hover #feed-link-btn { opacity: 1; }
+    #feed-title-bar:hover #feed-link-btn,
+    #feed-title-bar:hover #feed-folder-btn { opacity: 1; }
     #feed-link-btn:hover { color: #4a9ad4; }
     #feed-refresh-btn:hover { color: #4a9ad4; }
     #feed-delete-btn:hover { color: #e94560; }
@@ -510,6 +514,9 @@
       color: #68758c;
       font-size: 10px;
       font-weight: 400;
+    }
+    #feed-filter-select option.feed-filter-folder {
+      font-weight: 700;
     }
 
     #article-list {
@@ -1507,7 +1514,8 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* Feed discovery modal */
-    #feed-modal-overlay {
+    #feed-modal-overlay,
+    #folder-modal-overlay {
       display: none;
       position: fixed;
       inset: 0;
@@ -1516,8 +1524,10 @@
       align-items: center;
       justify-content: center;
     }
-    #feed-modal-overlay.open { display: flex; }
-    #feed-modal {
+    #feed-modal-overlay.open,
+    #folder-modal-overlay.open { display: flex; }
+    #feed-modal,
+    #folder-modal {
       background: #16213e;
       border: 1px solid #0f3460;
       border-radius: 8px;
@@ -1530,8 +1540,8 @@
       flex-direction: column;
       gap: 12px;
     }
-    #feed-modal h2 { margin: 0; font-size: 1rem; color: #e0e0e0; }
-    #feed-modal p  { margin: 0; font-size: 0.82rem; color: #888; }
+    #feed-modal h2, #folder-modal h2 { margin: 0; font-size: 1rem; color: #e0e0e0; }
+    #feed-modal p, #folder-modal p  { margin: 0; font-size: 0.82rem; color: #888; }
     #feed-modal-list {
       overflow-y: auto;
       display: flex;
@@ -1555,20 +1565,69 @@
     }
     .feed-option label strong { display: block; color: #e0e0e0; }
     .feed-option label span   { color: #888; font-size: 0.78rem; word-break: break-all; }
-    #feed-modal-buttons {
+    #feed-modal-buttons,
+    #folder-modal-buttons {
       display: flex;
       gap: 8px;
       justify-content: flex-end;
     }
-    #feed-modal-buttons button {
+    #feed-modal-buttons button,
+    #folder-modal-buttons button {
       padding: 6px 16px;
       border: none;
       border-radius: 4px;
       cursor: pointer;
       font-size: 0.85rem;
     }
-    #feed-modal-ok     { background: #e94560; color: #fff; }
-    #feed-modal-cancel { background: #0f3460; color: #ccc; }
+    #feed-modal-ok, #folder-modal-ok         { background: #e94560; color: #fff; }
+    #feed-modal-cancel, #folder-modal-cancel { background: #0f3460; color: #ccc; }
+
+    /* ---- Folder modal ---- */
+    #folder-modal {
+      min-width: 300px;
+      max-width: 380px;
+    }
+    #folder-modal-list {
+      overflow-y: auto;
+      max-height: 40vh;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .folder-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      background: #0f3460;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: #c8d6e5;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .folder-option:hover { border-color: #2b4f76; }
+    .folder-option.selected { border-color: #e94560; color: #fff; }
+    .folder-option .folder-option-count { margin-left: auto; color: #68758c; font-size: 0.75rem; }
+    #folder-modal-input {
+      width: 100%;
+      background: #0f3460;
+      border: 1px solid #1a4a8a;
+      border-radius: 4px;
+      padding: 7px 10px;
+      color: #e0e0e0;
+      font-size: 13px;
+    }
+    #folder-modal-input:focus { outline: none; border-color: #e94560; }
+    #folder-modal-input::placeholder { color: #3a4a5a; }
+    #folder-modal-buttons #folder-modal-dissolve {
+      margin-right: auto;
+      background: transparent;
+      border: 1px solid #2b4f76;
+      color: #b0bdd0;
+    }
+    #folder-modal-buttons #folder-modal-dissolve:hover { border-color: #e94560; color: #fff; }
 
     /* ==================== Theme toggle button ==================== */
     #theme-btn {
@@ -1700,7 +1759,8 @@
     body.light #feed-title-bar { background: var(--rss-panel-soft); border-bottom: none; }
     body.light #feed-link-btn,
     body.light #feed-refresh-btn,
-    body.light #feed-delete-btn { color: var(--rss-muted); }
+    body.light #feed-delete-btn,
+    body.light #feed-folder-btn { color: var(--rss-muted); }
     body.light #feed-link-btn:hover,
     body.light #feed-refresh-btn:hover { color: var(--rss-link); }
     body.light #feed-delete-btn:hover { color: var(--rss-accent); }
@@ -1864,9 +1924,19 @@
     body.light ::-webkit-scrollbar-thumb { background: #c8c0b4; }
     body.light ::-webkit-scrollbar-thumb:hover { background: #aaa195; }
     body.light .spinner { border-color: var(--rss-border); border-top-color: var(--rss-accent); }
-    body.light #feed-modal { background: var(--rss-panel); border-color: var(--rss-border); }
-    body.light #feed-modal h2 { color: var(--rss-text); }
-    body.light #feed-modal p { color: var(--rss-muted); }
+    body.light #feed-modal, body.light #folder-modal { background: var(--rss-panel); border-color: var(--rss-border); }
+    body.light #feed-modal h2, body.light #folder-modal h2 { color: var(--rss-text); }
+    body.light #feed-modal p, body.light #folder-modal p { color: var(--rss-muted); }
+    body.light .folder-option { background: var(--rss-panel-soft); color: var(--rss-text); }
+    body.light .folder-option:hover { border-color: var(--rss-border); }
+    body.light .folder-option.selected { border-color: var(--rss-accent); color: var(--rss-text); }
+    body.light .folder-option .folder-option-count { color: var(--rss-muted); }
+    body.light #folder-modal-input { background: #fff; border-color: var(--rss-border); color: var(--rss-text); }
+    body.light #folder-modal-input:focus { border-color: var(--rss-accent); }
+    body.light #folder-modal-ok { background: var(--rss-accent); color: #fff; }
+    body.light #folder-modal-cancel { background: var(--rss-panel-soft); color: var(--rss-text); }
+    body.light #folder-modal-buttons #folder-modal-dissolve { background: transparent; border-color: var(--rss-border); color: var(--rss-muted); }
+    body.light #folder-modal-buttons #folder-modal-dissolve:hover { border-color: var(--rss-accent); color: var(--rss-text); }
     body.light .feed-option { background: var(--rss-bg); }
     body.light .feed-option label strong { color: var(--rss-text); }
     body.light .feed-option label span { color: var(--rss-muted); }
@@ -2616,6 +2686,7 @@
     <div id="feed-title-bar">
       <img id="feed-title-favicon" class="favicon" style="display:none">
       <span id="feed-title-text"></span>
+      <button id="feed-folder-btn" data-tooltip="フォルダを設定" aria-label="フォルダを設定">📁</button>
       <a id="feed-link-btn" href="#" target="_blank" rel="noopener noreferrer" data-tooltip="フィードURLを開く" aria-label="フィードURLを開く">↗</a>
       <button id="feed-refresh-btn" data-tooltip="このフィードを更新" aria-label="このフィードを更新">⟳</button>
       <button id="feed-delete-btn" data-tooltip="フィードを削除" aria-label="フィードを削除">×</button>
@@ -2747,6 +2818,20 @@
 </div>
 
 
+<div id="folder-modal-overlay">
+  <div id="folder-modal">
+    <h2 id="folder-modal-title">📁 フォルダを設定</h2>
+    <p id="folder-modal-target"></p>
+    <div id="folder-modal-list"></div>
+    <input id="folder-modal-input" type="text" maxlength="30" placeholder="新しいフォルダ名を入力" autocomplete="off">
+    <div id="folder-modal-buttons">
+      <button id="folder-modal-dissolve" data-tooltip="フォルダを解除" aria-label="フォルダを解除（フィードは未分類に戻ります）">フォルダを解除</button>
+      <button id="folder-modal-cancel" data-tooltip="キャンセル" aria-label="キャンセル">キャンセル</button>
+      <button id="folder-modal-ok" data-tooltip="適用" aria-label="適用">OK</button>
+    </div>
+  </div>
+</div>
+
 <div id="feed-modal-overlay">
   <div id="feed-modal">
     <h2>🔗 フィードが見つかりました</h2>
@@ -2854,7 +2939,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-06-22.desktop-tile-fixed-height';
+const APP_VERSION = '2026-07-02.feed-folders';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
@@ -2943,21 +3028,45 @@ function queueCloudSync(reason = 'change') {
   }, 700);
 }
 
+// rss_feeds に folder 列がない旧スキーマ検出フラグ（検出後はフォルダ抜きで同期を継続）
+let cloudFolderColumnMissing = false;
+
+function notifyCloudFolderColumnMissing() {
+  console.warn('[RSS Cloud] rss_feeds に folder 列がないため、フォルダは同期されません。supabase-schema.sql の ALTER TABLE を実行してください。');
+  showStatus('Supabaseのrss_feedsにfolder列がないため、フォルダは同期されません。supabase-schema.sqlのALTER TABLEを実行してください。', 9000);
+}
+
+function isFolderColumnError(err) {
+  return /folder/i.test(String(err?.message || ''));
+}
+
 async function pushCloudState(reason = 'change') {
   if (!supabaseClient || !hasCloudConfig()) return null;
   clearTimeout(cloudSyncTimer);
   const runSync = async () => {
-    const feedRows = feeds.map((feed, index) => ({
-      profile_id: cloudConfig.profileId,
-      url: feed.url,
-      title: feed.title || '',
-      color: isSafeColor(feed.color) ? feed.color : COLORS[index % COLORS.length],
-      updated_at: new Date().toISOString(),
-    }));
+    const buildFeedRows = includeFolder => feeds.map((feed, index) => {
+      const row = {
+        profile_id: cloudConfig.profileId,
+        url: feed.url,
+        title: feed.title || '',
+        color: isSafeColor(feed.color) ? feed.color : COLORS[index % COLORS.length],
+        updated_at: new Date().toISOString(),
+      };
+      if (includeFolder) row.folder = getFeedFolder(feed);
+      return row;
+    });
+    const feedRows = buildFeedRows(!cloudFolderColumnMissing);
     const pinRows = [...pinnedUrls].filter(Boolean).map(url => ({ profile_id: cloudConfig.profileId, link: url }));
     const savedRows = savedArticles.filter(article => article.link).map(serializeArticleForCloud);
 
-    await syncCloudTable('rss_feeds', feedRows, 'url', ['profile_id', 'url']);
+    try {
+      await syncCloudTable('rss_feeds', feedRows, 'url', ['profile_id', 'url']);
+    } catch (err) {
+      if (cloudFolderColumnMissing || !isFolderColumnError(err)) throw err;
+      cloudFolderColumnMissing = true;
+      notifyCloudFolderColumnMissing();
+      await syncCloudTable('rss_feeds', buildFeedRows(false), 'url', ['profile_id', 'url']);
+    }
     await syncCloudTable('rss_pins', pinRows, 'link', ['profile_id', 'link']);
     await syncCloudTable('rss_saved_articles', savedRows, 'link', ['profile_id', 'link']);
 
@@ -3109,8 +3218,23 @@ async function verifyCloudCounts(expected) {
 async function loadCloudState() {
   if (!supabaseClient || !hasCloudConfig()) return false;
   try {
+    const loadFeedRows = async () => {
+      const columnsWithFolder = 'url,title,color,folder,created_at,updated_at';
+      const columnsWithoutFolder = 'url,title,color,created_at,updated_at';
+      if (cloudFolderColumnMissing) {
+        return runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', columnsWithoutFolder, 'created_at.asc'));
+      }
+      try {
+        return await runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', columnsWithFolder, 'created_at.asc'));
+      } catch (err) {
+        if (!isFolderColumnError(err)) throw err;
+        cloudFolderColumnMissing = true;
+        notifyCloudFolderColumnMissing();
+        return runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', columnsWithoutFolder, 'created_at.asc'));
+      }
+    };
     const [feedRows, pinRows, savedRows] = await Promise.all([
-      runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', 'url,title,color,created_at,updated_at', 'created_at.asc')),
+      loadFeedRows(),
       runCloudSelect('rss_pins', buildCloudSelectUrl('rss_pins', 'link')),
       runCloudSelect('rss_saved_articles', buildCloudSelectUrl('rss_saved_articles', 'title,link,feed_url,pub_date,image,content,saved_at', 'saved_at.desc')),
     ]);
@@ -3120,6 +3244,7 @@ async function loadCloudState() {
         url: row.url,
         title: row.title || '',
         color: isSafeColor(row.color) ? row.color : COLORS[index % COLORS.length],
+        folder: normalizeFolderName(row.folder),
       })).filter(feed => /^https?:\/\//i.test(feed.url));
       saveFeeds({ skipCloud: true });
     }
@@ -3136,7 +3261,8 @@ async function loadCloudState() {
     if (feeds.length === 0) {
       showStatus(`同期データを取得しましたが、フィードは0件です。共有ID違い、または同期元でフィード0件として保存されています。`, 9000);
     } else {
-      showStatus(`同期データを取得しました（フィード${feeds.length}件 / ピン${pinnedUrls.size}件 / 保存${savedArticles.length}件）`, 5000);
+      const folderNote = cloudFolderColumnMissing ? ' ※folder列が未作成のためフォルダは同期されません' : '';
+      showStatus(`同期データを取得しました（フィード${feeds.length}件 / ピン${pinnedUrls.size}件 / 保存${savedArticles.length}件）${folderNote}`, cloudFolderColumnMissing ? 9000 : 5000);
     }
     return true;
   } catch (err) {
@@ -3228,9 +3354,36 @@ let allArticles = (() => {
   } catch { return []; }
 })();
 let filteredArticles = [];
-let selectedFeedUrl = null; // null = すべて
+let selectedFeedUrl = null; // null = すべて / 'READ_LATER' / 'FOLDER:名前' / フィードURL
 let prevFeedUrlBeforeReadLater = null;
 let currentIndex = -1;
+
+// フィードのフォルダ分け
+// selectedFeedUrl 用の接頭辞（フィードURLは http(s) 始まりのため衝突しない）
+const FOLDER_STATE_PREFIX = 'FOLDER:';
+// <select> の option 値用の接頭辞
+const FOLDER_SELECT_PREFIX = '__folder__:';
+const FOLDER_NAME_MAX = 30;
+
+function normalizeFolderName(value) {
+  return typeof value === 'string' ? value.trim().slice(0, FOLDER_NAME_MAX) : '';
+}
+
+function getFeedFolder(feed) {
+  return normalizeFolderName(feed?.folder);
+}
+
+function isFolderSelection(value) {
+  return typeof value === 'string' && value.startsWith(FOLDER_STATE_PREFIX);
+}
+
+function selectedFolderName() {
+  return isFolderSelection(selectedFeedUrl) ? selectedFeedUrl.slice(FOLDER_STATE_PREFIX.length) : null;
+}
+
+function getFolderFeeds(folderName) {
+  return feeds.filter(f => getFeedFolder(f) === folderName);
+}
 
 // ピン: 記事URLのSet（localStorageで永続化）
 let pinnedUrls = new Set((() => { try { return JSON.parse(localStorage.getItem('rss-pinned') || '[]'); } catch { return []; } })());
@@ -3634,6 +3787,7 @@ function normalizeImportedFeed(feed, index) {
     url,
     title: typeof feed.title === 'string' ? feed.title : '',
     color: isSafeColor(feed.color) ? feed.color : COLORS[index % COLORS.length],
+    folder: normalizeFolderName(feed.folder),
   };
 }
 
@@ -4003,7 +4157,7 @@ async function addSingleFeed(url) {
   if (feeds.find(f => f.url === url)) return; // already exists
   const text = await fetchFeedWithFallback(url);
   const colorIndex = feeds.length % COLORS.length;
-  feeds.push({ url, title: '', color: COLORS[colorIndex] });
+  feeds.push({ url, title: '', color: COLORS[colorIndex], folder: '' });
   saveFeeds();
   const articles = parseFeed(text, url);
   allArticles = allArticles.filter(a => a.feedUrl !== url).concat(articles);
@@ -4109,6 +4263,30 @@ async function refreshSingleFeed(url, spinBtn) {
   }
 }
 
+async function refreshFolder(folderName, spinBtn) {
+  const targets = getFolderFeeds(folderName);
+  if (targets.length === 0) { showStatus('このフォルダにフィードがありません'); return; }
+  newArticleLinks.clear();
+  if (spinBtn) { spinBtn.classList.add('spinning'); spinBtn.disabled = true; }
+  try {
+    let failed = 0;
+    for (const feed of targets) {
+      const result = await refreshFeed(feed.url, true); // 保存は完了後に1回
+      if (!result.ok) failed++;
+    }
+    saveArticles();
+    renderFeedSelect();
+    applyFilter();
+    if (failed > 0) {
+      showStatus(`フォルダ「${folderName}」を更新（成功${targets.length - failed}件 / 失敗${failed}件）`, 5000);
+    } else {
+      showStatus(`フォルダ「${folderName}」の${targets.length}フィードを更新しました`);
+    }
+  } finally {
+    if (spinBtn) { spinBtn.classList.remove('spinning'); spinBtn.disabled = false; }
+  }
+}
+
 async function refreshAll() {
   if (isRefreshing) return;
   isRefreshing = true;
@@ -4188,12 +4366,16 @@ function getSortedFeeds() {
 function selectedFeedToSelectValue() {
   if (selectedFeedUrl === null) return '__all__';
   if (selectedFeedUrl === 'READ_LATER') return '__read_later__';
+  if (isFolderSelection(selectedFeedUrl)) return FOLDER_SELECT_PREFIX + selectedFeedUrl.slice(FOLDER_STATE_PREFIX.length);
   return selectedFeedUrl;
 }
 
 function selectValueToFeed(value) {
   if (value === '__all__') return null;
   if (value === '__read_later__') return 'READ_LATER';
+  if (typeof value === 'string' && value.startsWith(FOLDER_SELECT_PREFIX)) {
+    return FOLDER_STATE_PREFIX + value.slice(FOLDER_SELECT_PREFIX.length);
+  }
   return value;
 }
 
@@ -4222,12 +4404,47 @@ function renderFeedSelect() {
   separatorOption.className = 'feed-filter-separator';
   select.appendChild(separatorOption);
 
+  // フォルダごとにグループ化（フォルダ順・フォルダ内順とも最新記事日時順）
+  const folderOrder = [];
+  const feedsByFolder = new Map();
+  const uncategorized = [];
   getSortedFeeds().forEach(feed => {
+    const folderName = getFeedFolder(feed);
+    if (!folderName) { uncategorized.push(feed); return; }
+    if (!feedsByFolder.has(folderName)) {
+      feedsByFolder.set(folderName, []);
+      folderOrder.push(folderName);
+    }
+    feedsByFolder.get(folderName).push(feed);
+  });
+
+  const appendFeedOption = (feed, indent) => {
     const option = document.createElement('option');
     option.value = feed.url;
-    option.textContent = getFeedTitle(feed.url);
+    option.textContent = (indent ? '　' : '') + getFeedTitle(feed.url);
     select.appendChild(option);
+  };
+
+  folderOrder.forEach(folderName => {
+    const folderFeeds = feedsByFolder.get(folderName);
+    const folderOption = document.createElement('option');
+    folderOption.value = FOLDER_SELECT_PREFIX + folderName;
+    folderOption.textContent = `📁 ${folderName} (${folderFeeds.length})`;
+    folderOption.className = 'feed-filter-folder';
+    select.appendChild(folderOption);
+    folderFeeds.forEach(feed => appendFeedOption(feed, true));
   });
+
+  if (folderOrder.length > 0 && uncategorized.length > 0) {
+    const uncategorizedSeparator = document.createElement('option');
+    uncategorizedSeparator.value = '__separator2__';
+    uncategorizedSeparator.textContent = '────────────';
+    uncategorizedSeparator.disabled = true;
+    uncategorizedSeparator.className = 'feed-filter-separator';
+    select.appendChild(uncategorizedSeparator);
+  }
+
+  uncategorized.forEach(feed => appendFeedOption(feed, false));
 
   select.value = [...select.options].some(opt => opt.value === currentValue) ? currentValue : '__all__';
   if (select.value === '__all__' && selectedFeedUrl && selectedFeedUrl !== 'READ_LATER') selectedFeedUrl = null;
@@ -4245,6 +4462,9 @@ function renderMobileFeedSelect(sourceSelect = document.getElementById('feed-fil
 function applyFilter() {
   if (selectedFeedUrl === 'READ_LATER') {
     filteredArticles = [...savedArticles];
+  } else if (isFolderSelection(selectedFeedUrl)) {
+    const folderUrls = new Set(getFolderFeeds(selectedFolderName()).map(f => f.url));
+    filteredArticles = allArticles.filter(a => folderUrls.has(a.feedUrl));
   } else if (selectedFeedUrl === null) {
     filteredArticles = [...allArticles];
   } else {
@@ -4264,11 +4484,30 @@ function updateFeedTitleBar() {
     bar.classList.remove('visible');
     return;
   }
+  const faviconEl = document.getElementById('feed-title-favicon');
+  const textEl = document.getElementById('feed-title-text');
+  const linkBtn = document.getElementById('feed-link-btn');
+  const refreshBtn = document.getElementById('feed-refresh-btn');
+  const deleteBtn = document.getElementById('feed-delete-btn');
+  const folderBtn = document.getElementById('feed-folder-btn');
+
+  if (isFolderSelection(selectedFeedUrl)) {
+    const folderName = selectedFolderName();
+    faviconEl.style.display = 'none';
+    textEl.textContent = `📁 ${folderName}（${getFolderFeeds(folderName).length}フィード）`;
+    textEl.style.color = '';
+    linkBtn.style.display = 'none';
+    deleteBtn.style.display = 'none';
+    setButtonHelp(refreshBtn, 'フォルダ内のフィードを更新');
+    setButtonHelp(folderBtn, 'フォルダ名の変更・解除');
+    bar.classList.add('visible');
+    return;
+  }
+
   const title = getFeedTitle(selectedFeedUrl);
   const color = getFeedColor(selectedFeedUrl);
   const faviconUrl = getFaviconUrl(selectedFeedUrl);
 
-  const faviconEl = document.getElementById('feed-title-favicon');
   if (faviconUrl) {
     faviconEl.src = faviconUrl;
     faviconEl.style.display = '';
@@ -4277,11 +4516,14 @@ function updateFeedTitleBar() {
     faviconEl.style.display = 'none';
   }
 
-  const textEl = document.getElementById('feed-title-text');
   textEl.textContent = title;
   textEl.style.color = color;
 
-  document.getElementById('feed-link-btn').href = selectedFeedUrl;
+  linkBtn.style.display = '';
+  deleteBtn.style.display = '';
+  linkBtn.href = selectedFeedUrl;
+  setButtonHelp(refreshBtn, 'このフィードを更新');
+  setButtonHelp(folderBtn, 'フォルダを設定');
 
   bar.classList.add('visible');
 }
@@ -5258,11 +5500,17 @@ document.addEventListener('click', e => {
   if (bar.classList.contains('expanded') && !bar.contains(e.target)) closePinModal();
 });
 document.getElementById('feed-refresh-btn').addEventListener('click', () => {
-  if (selectedFeedUrl) refreshSingleFeed(selectedFeedUrl, document.getElementById('feed-refresh-btn'));
+  if (!selectedFeedUrl || selectedFeedUrl === 'READ_LATER') return;
+  const btn = document.getElementById('feed-refresh-btn');
+  if (isFolderSelection(selectedFeedUrl)) {
+    refreshFolder(selectedFolderName(), btn);
+  } else {
+    refreshSingleFeed(selectedFeedUrl, btn);
+  }
 });
 
 document.getElementById('feed-delete-btn').addEventListener('click', () => {
-  if (selectedFeedUrl) deleteFeed(selectedFeedUrl);
+  if (selectedFeedUrl && selectedFeedUrl !== 'READ_LATER' && !isFolderSelection(selectedFeedUrl)) deleteFeed(selectedFeedUrl);
 });
 
 document.getElementById('feed-filter-select').addEventListener('change', e => {
@@ -5397,6 +5645,159 @@ function showFeedSelectModal(discovered, siteUrl) {
 function closeFeedSelectModal() {
   document.getElementById('feed-modal-overlay').classList.remove('open');
 }
+
+// ============================================================
+// フォルダ設定モーダル
+// ============================================================
+// mode: 'assign' = フィードをフォルダへ割り当て / 'manage' = フォルダ名変更・解除
+// selected: '' = 未分類 / 'フォルダ名' / null = 新規入力中（既存選択なし）
+let folderModalState = null;
+
+function getAllFolderNames() {
+  const names = [];
+  feeds.forEach(feed => {
+    const folderName = getFeedFolder(feed);
+    if (folderName && !names.includes(folderName)) names.push(folderName);
+  });
+  return names.sort((a, b) => a.localeCompare(b, 'ja'));
+}
+
+function renderFolderModalList() {
+  const list = document.getElementById('folder-modal-list');
+  list.innerHTML = '';
+  if (!folderModalState || folderModalState.mode !== 'assign') return;
+  const rows = [{ name: '', label: '未分類' }, ...getAllFolderNames().map(name => ({ name, label: `📁 ${name}` }))];
+  rows.forEach(row => {
+    const div = document.createElement('div');
+    div.className = 'folder-option' + (folderModalState.selected === row.name ? ' selected' : '');
+    const label = document.createElement('span');
+    label.textContent = row.label;
+    div.appendChild(label);
+    if (row.name) {
+      const count = document.createElement('span');
+      count.className = 'folder-option-count';
+      count.textContent = `${getFolderFeeds(row.name).length}件`;
+      div.appendChild(count);
+    }
+    div.addEventListener('click', () => {
+      folderModalState.selected = row.name;
+      document.getElementById('folder-modal-input').value = '';
+      renderFolderModalList();
+    });
+    list.appendChild(div);
+  });
+}
+
+function openFolderModal() {
+  if (!selectedFeedUrl || selectedFeedUrl === 'READ_LATER') return;
+  const overlay = document.getElementById('folder-modal-overlay');
+  const titleEl = document.getElementById('folder-modal-title');
+  const targetEl = document.getElementById('folder-modal-target');
+  const listEl = document.getElementById('folder-modal-list');
+  const input = document.getElementById('folder-modal-input');
+  const dissolveBtn = document.getElementById('folder-modal-dissolve');
+
+  if (isFolderSelection(selectedFeedUrl)) {
+    const folderName = selectedFolderName();
+    folderModalState = { mode: 'manage', folderName };
+    titleEl.textContent = '📁 フォルダを編集';
+    targetEl.textContent = `フォルダ「${folderName}」の名前を変更、または解除できます。`;
+    listEl.style.display = 'none';
+    input.value = folderName;
+    input.placeholder = '新しいフォルダ名';
+    dissolveBtn.style.display = '';
+  } else {
+    const feed = feeds.find(f => f.url === selectedFeedUrl);
+    if (!feed) return;
+    folderModalState = { mode: 'assign', targetUrl: feed.url, selected: getFeedFolder(feed) };
+    titleEl.textContent = '📁 フォルダを設定';
+    targetEl.textContent = `「${getFeedTitle(feed.url)}」を入れるフォルダを選ぶか、新しいフォルダ名を入力してください。`;
+    listEl.style.display = '';
+    input.value = '';
+    input.placeholder = '新しいフォルダ名を入力';
+    dissolveBtn.style.display = 'none';
+    renderFolderModalList();
+  }
+  overlay.classList.add('open');
+  setTimeout(() => input.focus(), 0);
+}
+
+function closeFolderModal() {
+  document.getElementById('folder-modal-overlay').classList.remove('open');
+  folderModalState = null;
+}
+
+function applyFolderModal() {
+  if (!folderModalState) { closeFolderModal(); return; }
+  const typedName = normalizeFolderName(document.getElementById('folder-modal-input').value);
+
+  if (folderModalState.mode === 'assign') {
+    const feed = feeds.find(f => f.url === folderModalState.targetUrl);
+    if (!feed) { closeFolderModal(); return; }
+    const nextFolder = typedName !== '' ? typedName : folderModalState.selected;
+    if (nextFolder === null || nextFolder === undefined) { closeFolderModal(); return; }
+    const changed = getFeedFolder(feed) !== nextFolder;
+    feed.folder = nextFolder;
+    if (changed) {
+      saveFeeds();
+      renderFeedSelect();
+      applyFilter();
+      showStatus(nextFolder ? `「${getFeedTitle(feed.url)}」を 📁${nextFolder} に移動しました` : `「${getFeedTitle(feed.url)}」を未分類に戻しました`);
+    }
+    closeFolderModal();
+    return;
+  }
+
+  // manage: フォルダ名の変更
+  const oldName = folderModalState.folderName;
+  if (!typedName) { showStatus('フォルダ名を入力してください'); return; }
+  if (typedName !== oldName) {
+    getFolderFeeds(oldName).forEach(feed => { feed.folder = typedName; });
+    saveFeeds();
+    selectedFeedUrl = FOLDER_STATE_PREFIX + typedName;
+    renderFeedSelect();
+    applyFilter();
+    showStatus(`フォルダ名を「${typedName}」に変更しました`);
+  }
+  closeFolderModal();
+}
+
+function dissolveFolderFromModal() {
+  if (!folderModalState || folderModalState.mode !== 'manage') return;
+  const folderName = folderModalState.folderName;
+  if (!confirm(`フォルダ「${folderName}」を解除しますか？\n（中のフィードは未分類に戻ります。フィード自体は削除されません）`)) return;
+  getFolderFeeds(folderName).forEach(feed => { feed.folder = ''; });
+  saveFeeds();
+  selectedFeedUrl = null;
+  currentIndex = -1;
+  renderFeedSelect();
+  applyFilter();
+  showDetail(-1);
+  showStatus(`フォルダ「${folderName}」を解除しました`);
+  closeFolderModal();
+}
+
+document.getElementById('feed-folder-btn').addEventListener('click', openFolderModal);
+document.getElementById('folder-modal-ok').addEventListener('click', applyFolderModal);
+document.getElementById('folder-modal-cancel').addEventListener('click', closeFolderModal);
+document.getElementById('folder-modal-dissolve').addEventListener('click', dissolveFolderFromModal);
+document.getElementById('folder-modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeFolderModal();
+});
+document.getElementById('folder-modal-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); applyFolderModal(); }
+  if (e.key === 'Escape') { e.preventDefault(); closeFolderModal(); }
+});
+document.getElementById('folder-modal-input').addEventListener('input', e => {
+  if (!folderModalState || folderModalState.mode !== 'assign') return;
+  const hasText = normalizeFolderName(e.target.value) !== '';
+  const feed = feeds.find(f => f.url === folderModalState.targetUrl);
+  const next = hasText ? null : (feed ? getFeedFolder(feed) : '');
+  if (folderModalState.selected !== next) {
+    folderModalState.selected = next;
+    renderFolderModalList();
+  }
+});
 
 document.getElementById('feed-modal-cancel').addEventListener('click', () => {
   closeFeedSelectModal();
