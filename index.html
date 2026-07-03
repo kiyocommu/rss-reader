@@ -27,6 +27,21 @@
       overflow: hidden;
     }
 
+    ::selection { background: rgba(233, 69, 96, 0.32); color: #fff; }
+    body.light ::selection { background: var(--rss-accent-soft); color: var(--rss-text); }
+
+    button:focus-visible,
+    select:focus-visible,
+    a:focus-visible {
+      outline: 2px solid rgba(233, 69, 96, 0.55);
+      outline-offset: 2px;
+    }
+    body.light button:focus-visible,
+    body.light select:focus-visible,
+    body.light a:focus-visible {
+      outline-color: var(--rss-accent);
+    }
+
     /* Header */
     #header {
       background: #172341;
@@ -269,7 +284,7 @@
     /* ---- Settings Modal ---- */
     #rss-settings-overlay {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.55);
       z-index: 200;
       display: flex;
       align-items: center;
@@ -281,6 +296,9 @@
       border-radius: 8px;
       width: 360px;
       max-width: 90vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42);
     }
     #rss-settings-modal-header {
       display: flex;
@@ -298,7 +316,8 @@
     #rss-settings-close-btn:hover { color: #c8d6e5; }
     #rss-settings-modal-body { padding: 16px; }
     #rss-settings-modal-body label { display: block; font-size: 12px; color: #7a8ba0; margin-bottom: 6px; }
-    #rss-custom-proxy-input {
+    #rss-custom-proxy-input,
+    #rss-auto-refresh-input {
       width: 100%;
       background: #0f3460;
       border: 1px solid #1a4a8a;
@@ -307,8 +326,10 @@
       color: #e0e0e0;
       font-size: 12px;
     }
-    #rss-custom-proxy-input:focus { outline: none; border-color: #e94560; }
-    #rss-custom-proxy-input::placeholder { color: #3a4a5a; }
+    #rss-custom-proxy-input:focus,
+    #rss-auto-refresh-input:focus { outline: none; border-color: #e94560; }
+    #rss-custom-proxy-input::placeholder,
+    #rss-auto-refresh-input::placeholder { color: #3a4a5a; }
     .rss-settings-hint { font-size: 11px; color: #5a6a7a; margin-top: 8px; line-height: 1.5; }
     .settings-row {
       display: flex;
@@ -452,6 +473,11 @@
     #feed-delete-btn:hover { color: #e94560; }
     #feed-refresh-btn.spinning { opacity: 1; animation: spin 0.6s linear infinite; cursor: default; }
 
+    /* タッチ端末ではホバーが使えないため、フィード操作ボタンを常時表示する */
+    @media (hover: none) {
+      #feed-refresh-btn, #feed-delete-btn, #feed-link-btn, #feed-folder-btn { opacity: 0.7; }
+    }
+
     /* Article list */
     #article-list-panel {
       width: 360px;
@@ -495,7 +521,7 @@
       height: 28px;
       padding: 0 30px 0 9px;
       border: 1px solid #0f3460;
-      border-radius: 0;
+      border-radius: 4px;
       background: #16213e;
       color: #e0e0e0;
       font: 11px "Helvetica Neue", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -796,7 +822,7 @@
       transition: color 0.15s, border-color 0.15s;
       line-height: 1;
     }
-    #view-toggle-btn:hover { color: #e0e0e0; border-color: #1a4a8a; }
+    #view-toggle-btn:hover { color: #c8d6e5; border-color: #3d5f84; }
     #view-toggle-btn.active { color: #e94560; border-color: #e94560; }
 
     #saved-export-btn {
@@ -810,7 +836,7 @@
       padding: 2px 6px;
       transition: color 0.15s, border-color 0.15s;
     }
-    #saved-export-btn:hover { color: #e0e0e0; border-color: #1a4a8a; }
+    #saved-export-btn:hover { color: #c8d6e5; border-color: #3d5f84; }
 
     /* Tile mode layout */
     #main.tile-mode #article-list-panel { flex: 1; width: auto; }
@@ -1253,6 +1279,54 @@
       color: #f0f3f8;
       margin: 16px 0 8px;
     }
+    #detail-content blockquote {
+      margin: 12px 0;
+      padding: 4px 0 4px 14px;
+      border-left: 3px solid #46577c;
+      color: #aab6c9;
+    }
+    #detail-content ul, #detail-content ol { margin: 0 0 12px; padding-left: 24px; }
+    #detail-content li { margin-bottom: 4px; }
+    #detail-content code {
+      font-family: 'Menlo', 'Monaco', 'Consolas', monospace;
+      font-size: 0.88em;
+      background: rgba(15, 52, 96, 0.55);
+      border-radius: 3px;
+      padding: 1px 5px;
+      word-break: break-all;
+    }
+    #detail-content pre {
+      background: #1b2540;
+      border: 1px solid #33405f;
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin: 12px 0;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    #detail-content pre code { background: none; padding: 0; font-size: inherit; word-break: normal; }
+    #detail-content hr { border: none; border-top: 1px solid #3a4763; margin: 20px 0; }
+    #detail-content table {
+      border-collapse: collapse;
+      max-width: 100%;
+      margin: 12px 0;
+      font-size: 14px;
+      display: block;
+      overflow-x: auto;
+    }
+    #detail-content th, #detail-content td { border: 1px solid #3a4763; padding: 6px 10px; }
+    #detail-content th { background: rgba(15, 52, 96, 0.5); }
+    #detail-content figure { margin: 12px 0; }
+    #detail-content figcaption { font-size: 12px; color: #8b99b0; margin-top: 4px; }
+    body.light #detail-content blockquote { border-left-color: var(--rss-border); color: var(--rss-muted); }
+    body.light #detail-content code { background: var(--rss-panel-soft); }
+    body.light #detail-content pre { background: var(--rss-panel-soft); border-color: var(--rss-border); }
+    body.light #detail-content pre code { background: none; }
+    body.light #detail-content hr { border-top-color: var(--rss-border); }
+    body.light #detail-content th, body.light #detail-content td { border-color: var(--rss-border); }
+    body.light #detail-content th { background: var(--rss-panel-soft); }
+    body.light #detail-content figcaption { color: var(--rss-muted); }
 
     /* Empty states */
     #empty-state {
@@ -1261,12 +1335,14 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      color: #444;
+      color: #55648a;
       gap: 8px;
     }
 
-    #empty-state .icon { font-size: 48px; }
-    #empty-state p { font-size: 14px; }
+    #empty-state .icon { font-size: 48px; opacity: 0.85; }
+    #empty-state p { font-size: 14px; letter-spacing: 0.03em; }
+    #empty-state .empty-hint { font-size: 12px; color: #3d4a68; }
+    body.light #empty-state .empty-hint { color: color-mix(in srgb, var(--rss-muted) 70%, var(--rss-bg)); }
 
     /* End-of-list item (article list) */
     .article-end {
@@ -1477,6 +1553,7 @@
       white-space: pre-wrap;
       word-break: break-all;
       text-align: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     }
 
     /* Favicon */
@@ -1519,7 +1596,7 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.55);
       z-index: 1000;
       align-items: center;
       justify-content: center;
@@ -1531,6 +1608,7 @@
       background: #16213e;
       border: 1px solid #0f3460;
       border-radius: 8px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42);
       padding: 20px 24px;
       min-width: 340px;
       max-width: 520px;
@@ -1710,7 +1788,7 @@
       background: color-mix(in srgb, var(--rss-text) 92%, var(--rss-bg));
       border-color: var(--rss-border);
     }
-    body.light #rss-settings-modal { background: var(--rss-panel); border-color: var(--rss-border); }
+    body.light #rss-settings-modal { background: var(--rss-panel); border-color: var(--rss-border); box-shadow: 0 16px 34px rgba(42,39,35,0.22); }
     body.light #rss-settings-modal-header { color: var(--rss-text); border-color: var(--rss-border); }
     body.light #rss-settings-close-btn { color: var(--rss-muted); }
     body.light #rss-settings-close-btn:hover { color: var(--rss-accent); }
@@ -1732,9 +1810,12 @@
       color: var(--rss-accent);
     }
     body.light #rss-settings-modal-footer { border-color: var(--rss-border); }
-    body.light #rss-custom-proxy-input { background: var(--rss-bg); border-color: var(--rss-border); color: var(--rss-text); }
-    body.light #rss-custom-proxy-input:focus { border-color: var(--rss-accent); }
-    body.light #rss-custom-proxy-input::placeholder { color: var(--rss-muted); }
+    body.light #rss-custom-proxy-input,
+    body.light #rss-auto-refresh-input { background: var(--rss-bg); border-color: var(--rss-border); color: var(--rss-text); }
+    body.light #rss-custom-proxy-input:focus,
+    body.light #rss-auto-refresh-input:focus { border-color: var(--rss-accent); }
+    body.light #rss-custom-proxy-input::placeholder,
+    body.light #rss-auto-refresh-input::placeholder { color: var(--rss-muted); }
     body.light #cloud-sync-now-btn {
       background: transparent;
       border-color: var(--rss-border);
@@ -1917,14 +1998,14 @@
     body.light #refresh-loader { background: color-mix(in srgb, var(--rss-panel) 96%, transparent); border-color: var(--rss-border); box-shadow: 0 4px 20px rgba(42,39,35,0.12); }
     body.light .loader-dot { background: var(--rss-border); }
     body.light #loader-count { color: var(--rss-muted); }
-    body.light #status { background: var(--rss-panel-soft); border-color: var(--rss-border); color: var(--rss-text); }
+    body.light #status { background: var(--rss-panel-soft); border-color: var(--rss-border); color: var(--rss-text); box-shadow: 0 8px 20px rgba(42,39,35,0.15); }
     body.light,
     body.light * { scrollbar-color: #c8c0b4 transparent; }
     body.light ::-webkit-scrollbar-track { background: transparent; }
     body.light ::-webkit-scrollbar-thumb { background: #c8c0b4; }
     body.light ::-webkit-scrollbar-thumb:hover { background: #aaa195; }
     body.light .spinner { border-color: var(--rss-border); border-top-color: var(--rss-accent); }
-    body.light #feed-modal, body.light #folder-modal { background: var(--rss-panel); border-color: var(--rss-border); }
+    body.light #feed-modal, body.light #folder-modal { background: var(--rss-panel); border-color: var(--rss-border); box-shadow: 0 16px 34px rgba(42,39,35,0.22); }
     body.light #feed-modal h2, body.light #folder-modal h2 { color: var(--rss-text); }
     body.light #feed-modal p, body.light #folder-modal p { color: var(--rss-muted); }
     body.light .folder-option { background: var(--rss-panel-soft); color: var(--rss-text); }
@@ -2654,7 +2735,7 @@
       height: 26px;
       padding: 0 9px;
       border: 1px solid #0f3460;
-      border-radius: 0;
+      border-radius: 4px;
       background: #16213e;
       color: #e0e0e0;
       font-size: 12px;
@@ -2667,6 +2748,7 @@
       padding: 0 8px;
       background: #16213e;
       border: 1px solid #0f3460;
+      border-radius: 4px;
       color: #7a8ba0;
       font-size: 11px;
       cursor: pointer;
@@ -2721,7 +2803,7 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.55);
       z-index: 1000;
       align-items: center;
       justify-content: center;
@@ -2730,10 +2812,12 @@
     #shortcut-help-modal {
       background: #16213e;
       border: 1px solid #0f3460;
+      border-radius: 8px;
       width: min(420px, calc(100vw - 32px));
       max-height: calc(100vh - 64px);
       overflow-y: auto;
       padding: 16px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42);
     }
     #shortcut-help-header {
       display: flex;
@@ -2765,7 +2849,7 @@
       font-size: 11px;
       font-family: inherit;
     }
-    body.light #shortcut-help-modal { background: var(--rss-panel); border-color: var(--rss-border); }
+    body.light #shortcut-help-modal { background: var(--rss-panel); border-color: var(--rss-border); box-shadow: 0 16px 34px rgba(42,39,35,0.22); }
     body.light #shortcut-help-header { color: var(--rss-text); }
     body.light #shortcut-help-table { color: var(--rss-text); }
     body.light #shortcut-help-table td { border-bottom-color: var(--rss-border); }
@@ -2780,9 +2864,11 @@
       padding: 5px 12px;
       background: #0f3460;
       border: 1px solid #0f3460;
+      border-radius: 4px;
       color: #c8d6e5;
       font-size: 12px;
       cursor: pointer;
+      white-space: nowrap;
     }
     #opml-export-btn:hover, #opml-import-btn:hover { border-color: #3d5f84; color: #fff; }
     body.light #opml-export-btn, body.light #opml-import-btn {
@@ -2864,7 +2950,7 @@
     <div id="empty-state">
       <div class="icon">📰</div>
       <p>記事を選択してください</p>
-      <p style="font-size:12px; color:#333;">j: 次の記事 / o: 元記事を開く</p>
+      <p class="empty-hint">j: 次の記事 / o: 元記事を開く</p>
     </div>
     <div id="end-state">
       <div class="end-sky">
@@ -3140,7 +3226,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-03.search-ime-fix';
+const APP_VERSION = '2026-07-04.design-polish';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
