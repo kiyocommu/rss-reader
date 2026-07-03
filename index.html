@@ -2637,6 +2637,163 @@
       }
       .cloud-status-pill { display: none; }
     }
+
+    /* 記事検索バー・未読フィルタ */
+    #article-search-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: #172341;
+      border-bottom: none;
+      flex-shrink: 0;
+    }
+    #article-search-input {
+      flex: 1;
+      min-width: 0;
+      height: 26px;
+      padding: 0 9px;
+      border: 1px solid #0f3460;
+      border-radius: 0;
+      background: #16213e;
+      color: #e0e0e0;
+      font-size: 12px;
+      outline: none;
+    }
+    #article-search-input:focus { border-color: #e94560; }
+    #article-search-input::placeholder { color: #4a5a70; }
+    #unread-only-btn, #mark-read-btn {
+      height: 26px;
+      padding: 0 8px;
+      background: #16213e;
+      border: 1px solid #0f3460;
+      color: #7a8ba0;
+      font-size: 11px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+    #unread-only-btn:hover, #mark-read-btn:hover { color: #c8d6e5; border-color: #3d5f84; }
+    #unread-only-btn.active {
+      background: rgba(233,69,96,0.15);
+      border-color: #e94560;
+      color: #e94560;
+    }
+    body.light #article-search-bar { background: var(--rss-panel); }
+    body.light #article-search-input,
+    body.light #unread-only-btn,
+    body.light #mark-read-btn {
+      background: var(--rss-bg);
+      border-color: var(--rss-border);
+      color: var(--rss-text);
+    }
+    body.light #article-search-input::placeholder { color: var(--rss-muted); }
+    body.light #unread-only-btn.active {
+      background: var(--rss-accent-soft);
+      border-color: var(--rss-accent);
+      color: var(--rss-accent);
+    }
+
+    /* 既読記事 */
+    .article-item.read .article-title {
+      color: #7a8ba0;
+      font-weight: normal;
+    }
+    .article-item.read .tile-thumbnail { opacity: 0.6; }
+    .article-item.read.active .article-title { color: #fff; }
+    body.light .article-item.read .article-title { color: var(--rss-muted); }
+    body.light .article-item.read.active .article-title { color: var(--rss-text); }
+
+    /* フィード健全性表示 */
+    #feed-health-text {
+      flex-shrink: 0;
+      font-size: 10px;
+      color: #666;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 40%;
+    }
+    #feed-health-text.warn { color: #e94560; }
+
+    /* ショートカットヘルプ */
+    #shortcut-help-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    #shortcut-help-overlay.open { display: flex; }
+    #shortcut-help-modal {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      width: min(420px, calc(100vw - 32px));
+      max-height: calc(100vh - 64px);
+      overflow-y: auto;
+      padding: 16px;
+    }
+    #shortcut-help-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: #e0e0e0;
+    }
+    #shortcut-help-close {
+      background: none;
+      border: none;
+      color: #7a8ba0;
+      font-size: 15px;
+      cursor: pointer;
+      padding: 2px 6px;
+    }
+    #shortcut-help-close:hover { color: #c8d6e5; }
+    #shortcut-help-table { width: 100%; border-collapse: collapse; font-size: 12px; color: #c8d6e5; }
+    #shortcut-help-table td { padding: 5px 8px; border-bottom: 1px solid #0f3460; }
+    #shortcut-help-table td:first-child { white-space: nowrap; width: 40%; }
+    #shortcut-help-table kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border: 1px solid #3d5f84;
+      border-radius: 3px;
+      background: #0f3460;
+      color: #e0e0e0;
+      font-size: 11px;
+      font-family: inherit;
+    }
+    body.light #shortcut-help-modal { background: var(--rss-panel); border-color: var(--rss-border); }
+    body.light #shortcut-help-header { color: var(--rss-text); }
+    body.light #shortcut-help-table { color: var(--rss-text); }
+    body.light #shortcut-help-table td { border-bottom-color: var(--rss-border); }
+    body.light #shortcut-help-table kbd {
+      background: var(--rss-bg);
+      border-color: var(--rss-border);
+      color: var(--rss-text);
+    }
+
+    /* 設定モーダル内 OPML ボタン */
+    #opml-export-btn, #opml-import-btn {
+      padding: 5px 12px;
+      background: #0f3460;
+      border: 1px solid #0f3460;
+      color: #c8d6e5;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    #opml-export-btn:hover, #opml-import-btn:hover { border-color: #3d5f84; color: #fff; }
+    body.light #opml-export-btn, body.light #opml-import-btn {
+      background: var(--rss-bg);
+      border-color: var(--rss-border);
+      color: var(--rss-text);
+    }
+
+    @media (max-width: 760px) {
+      #article-search-bar { padding: 6px 12px; }
+    }
   </style>
 </head>
 <body>
@@ -2683,9 +2840,15 @@
         <button id="view-toggle-btn" data-tooltip="タイル表示" data-tooltip-align="right" aria-label="タイル表示">⊞</button>
       </div>
     </div>
+    <div id="article-search-bar">
+      <input id="article-search-input" type="search" placeholder="記事を検索 (/)" aria-label="記事を検索" autocomplete="off">
+      <button id="unread-only-btn" data-tooltip="未読のみ表示" aria-label="未読のみ表示" aria-pressed="false">未読</button>
+      <button id="mark-read-btn" data-tooltip="表示中の記事をすべて既読にする (Shift+A)" data-tooltip-align="right" aria-label="表示中の記事をすべて既読にする">✓</button>
+    </div>
     <div id="feed-title-bar">
       <img id="feed-title-favicon" class="favicon" style="display:none">
       <span id="feed-title-text"></span>
+      <span id="feed-health-text"></span>
       <button id="feed-folder-btn" data-tooltip="フォルダを設定" aria-label="フォルダを設定">📁</button>
       <a id="feed-link-btn" href="#" target="_blank" rel="noopener noreferrer" data-tooltip="フィードURLを開く" aria-label="フィードURLを開く">↗</a>
       <button id="feed-refresh-btn" data-tooltip="このフィードを更新" aria-label="このフィードを更新">⟳</button>
@@ -2759,6 +2922,8 @@
   <span class="shortcut"><kbd>r</kbd> 更新</span>
   <span class="shortcut"><kbd>t</kbd> タイル切替</span>
   <span class="shortcut"><kbd>f</kbd> 集中モード</span>
+  <span class="shortcut"><kbd>/</kbd> 検索</span>
+  <span class="shortcut"><kbd>?</kbd> ヘルプ</span>
   <button id="theme-btn" data-tooltip="テーマ" data-tooltip-pos="top" data-tooltip-align="right" aria-label="ライト/ダークモード切替"></button>
 </div>
 
@@ -2800,6 +2965,17 @@
       <label for="rss-custom-proxy-input">カスタムCORSプロキシ URL（省略可）</label>
       <input type="url" id="rss-custom-proxy-input" placeholder="例: http://localhost:8080/" />
       <div class="rss-settings-hint">設定時は公開プロキシを使わずこのURLにリクエストを転送します<br>空欄のままにすると従来どおり公開プロキシ（allorigins.win 等）を使用</div>
+      <label for="rss-auto-refresh-input">自動更新間隔（分、0 = オフ）</label>
+      <input type="number" id="rss-auto-refresh-input" min="0" step="5" placeholder="0" />
+      <div class="rss-settings-hint">タブを表示している間だけ、指定間隔で全フィードを自動更新します（最小15分。公開プロキシのレート制限対策）</div>
+      <div class="settings-row">
+        <span class="settings-row-label">OPML（他のRSSリーダーと連携）</span>
+        <span style="display:flex;gap:8px;">
+          <button id="opml-export-btn" type="button" data-tooltip="OPMLファイルに書き出す" aria-label="フィードをOPMLファイルに書き出す">エクスポート</button>
+          <button id="opml-import-btn" type="button" data-tooltip="OPMLファイルを読み込む" aria-label="OPMLファイルからフィードを読み込む">インポート</button>
+        </span>
+      </div>
+      <input id="opml-import-input" type="file" accept=".opml,.xml,text/xml,text/x-opml" style="display:none">
       <div class="cloud-settings-grid">
         <label for="cloud-supabase-url-input">Supabase URL（同期する場合のみ）</label>
         <input type="url" id="cloud-supabase-url-input" placeholder="https://xxxxx.supabase.co" autocomplete="off" />
@@ -2844,7 +3020,32 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<div id="shortcut-help-overlay">
+  <div id="shortcut-help-modal" role="dialog" aria-modal="true" aria-labelledby="shortcut-help-title">
+    <div id="shortcut-help-header">
+      <strong id="shortcut-help-title">⌨ キーボードショートカット</strong>
+      <button id="shortcut-help-close" type="button" data-tooltip="閉じる" aria-label="閉じる">✕</button>
+    </div>
+    <table id="shortcut-help-table">
+      <tbody>
+        <tr><td><kbd>j</kbd> / <kbd>k</kbd></td><td>次の記事 / 前の記事</td></tr>
+        <tr><td><kbd>Space</kbd></td><td>記事本文を下へスクロール</td></tr>
+        <tr><td><kbd>o</kbd></td><td>現在の記事を新しいタブで開く</td></tr>
+        <tr><td><kbd>r</kbd></td><td>全フィードを更新</td></tr>
+        <tr><td><kbd>t</kbd></td><td>タイル表示を切り替え</td></tr>
+        <tr><td><kbd>f</kbd></td><td>集中モードを切り替え</td></tr>
+        <tr><td><kbd>p</kbd></td><td>現在の記事のピンを切り替え</td></tr>
+        <tr><td><kbd>s</kbd></td><td>現在の記事を Read It Later に保存 / 解除</td></tr>
+        <tr><td><kbd>b</kbd></td><td>Read It Later を開く / 元の表示に戻る</td></tr>
+        <tr><td><kbd>/</kbd></td><td>記事検索にフォーカス</td></tr>
+        <tr><td><kbd>Shift</kbd> + <kbd>A</kbd></td><td>表示中の記事をすべて既読にする</td></tr>
+        <tr><td><kbd>?</kbd></td><td>このヘルプを表示</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>モーダル・集中モードを閉じる</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <script>
 // テーマをすぐ適用（フラッシュ防止）
 if (localStorage.getItem('rss-theme') === 'light') document.body.classList.add('light');
@@ -2904,7 +3105,7 @@ const CORS_STRATEGIES = [
         '<item>',
         `<title>${esc(item.title)}</title>`,
         `<link>${esc(item.link)}</link>`,
-        `<pubDate>${(item.pubDate || '').replace(' ', 'T')}</pubDate>`,
+        `<pubDate>${esc((item.pubDate || '').replace(' ', 'T'))}</pubDate>`,
         `<description><![CDATA[${item.content || item.description || ''}]]></description>`,
         item.thumbnail ? `<media:thumbnail url="${esc(item.thumbnail)}"/>` : '',
         '</item>',
@@ -2939,7 +3140,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-02.feed-folders';
+const APP_VERSION = '2026-07-03.search-ime-fix';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
@@ -2953,7 +3154,9 @@ let cloudConfig = (() => {
     return { url: '', anonKey: '', profileId: DEFAULT_PROFILE_ID };
   }
 })();
-let supabaseClient = null;
+// 同期は REST（PostgREST）のみで行うため supabase-js SDK は使わない
+// （CDN 障害・モバイルブラウザの SDK 読み込み失敗で同期が止まるのを防ぐ）
+let cloudEnabled = false;
 let cloudSyncTimer = null;
 let cloudSyncPromise = Promise.resolve();
 
@@ -2962,14 +3165,9 @@ function hasCloudConfig() {
 }
 
 function initCloudClient() {
-  if (!hasCloudConfig() || !window.supabase?.createClient) {
-    supabaseClient = null;
-    updateCloudStatus();
-    return null;
-  }
-  supabaseClient = window.supabase.createClient(cloudConfig.url, cloudConfig.anonKey);
-  updateCloudStatus('online');
-  return supabaseClient;
+  cloudEnabled = hasCloudConfig();
+  updateCloudStatus(cloudEnabled ? 'online' : undefined);
+  return cloudEnabled;
 }
 
 function saveCloudConfig(nextConfig) {
@@ -2979,13 +3177,16 @@ function saveCloudConfig(nextConfig) {
     profileId: (nextConfig.profileId || DEFAULT_PROFILE_ID).trim() || DEFAULT_PROFILE_ID,
   };
   try { localStorage.setItem(CLOUD_STORAGE_KEY, JSON.stringify(cloudConfig)); } catch {}
+  if (cloudConfig.profileId && /[^A-Za-z0-9_-]/.test(cloudConfig.profileId)) {
+    showStatus('共有IDは英数字とハイフン・アンダースコアのみを推奨します（記号を含むと同期に失敗する場合があります）', 6000);
+  }
   initCloudClient();
 }
 
 function updateCloudStatus(mode) {
   const el = document.getElementById('cloud-status');
   if (!el) return;
-  const online = mode === 'online' || (!!supabaseClient && hasCloudConfig());
+  const online = mode === 'online' || cloudEnabled;
   el.textContent = online ? `sync: ${cloudConfig.profileId}` : 'local';
   el.title = `RSS Reader ${APP_VERSION}`;
   el.classList.toggle('online', online);
@@ -3017,7 +3218,7 @@ function cloudArticleToLocal(row) {
 }
 
 function queueCloudSync(reason = 'change') {
-  if (!supabaseClient || !hasCloudConfig()) return;
+  if (!cloudEnabled) return;
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = setTimeout(() => {
     pushCloudState(reason).catch(err => {
@@ -3041,7 +3242,7 @@ function isFolderColumnError(err) {
 }
 
 async function pushCloudState(reason = 'change') {
-  if (!supabaseClient || !hasCloudConfig()) return null;
+  if (!cloudEnabled) return null;
   clearTimeout(cloudSyncTimer);
   const runSync = async () => {
     const buildFeedRows = includeFolder => feeds.map((feed, index) => {
@@ -3190,10 +3391,16 @@ async function syncCloudTable(tableName, rows, keyColumn, conflictColumns) {
     .map(row => String(row[keyColumn] || ''))
     .filter(key => key && !currentKeys.has(key));
 
-  for (const staleKey of staleKeys) {
-    await deleteCloudRows(tableName, {
-      profile_id: cloudConfig.profileId,
-      [keyColumn]: staleKey,
+  // in.(...) でまとめて削除（URL長対策で50件ずつ）
+  const CHUNK = 50;
+  for (let i = 0; i < staleKeys.length; i += CHUNK) {
+    const chunk = staleKeys.slice(i, i + CHUNK);
+    const params = new URLSearchParams();
+    params.set('profile_id', `eq.${cloudConfig.profileId}`);
+    params.set(keyColumn, `in.(${chunk.map(key => `"${key.replace(/"/g, '\\"')}"`).join(',')})`);
+    await cloudFetch(tableName, `${getCloudRestBase()}/${tableName}?${params.toString()}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
     });
   }
 }
@@ -3216,7 +3423,7 @@ async function verifyCloudCounts(expected) {
 }
 
 async function loadCloudState() {
-  if (!supabaseClient || !hasCloudConfig()) return false;
+  if (!cloudEnabled) return false;
   try {
     const loadFeedRows = async () => {
       const columnsWithFolder = 'url,title,color,folder,created_at,updated_at';
@@ -3344,15 +3551,82 @@ function toggleFocusMode() {
   }
 }
 
-let allArticles = (() => {
+// 記事キャッシュは IndexedDB に保存する（localStorage の容量制限対策）。
+// IndexedDB が使えない環境では従来どおり localStorage にフォールバックする。
+let allArticles = [];
+
+const ARTICLE_DB_NAME = 'rss-reader-db';
+const ARTICLE_DB_STORE = 'kv';
+let articleDbFailed = typeof indexedDB === 'undefined';
+
+function openArticleDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(ARTICLE_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains(ARTICLE_DB_STORE)) {
+        req.result.createObjectStore(ARTICLE_DB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error('IndexedDB open blocked'));
+  });
+}
+
+async function idbSet(key, value) {
+  const db = await openArticleDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ARTICLE_DB_STORE, 'readwrite');
+    tx.objectStore(ARTICLE_DB_STORE).put(value, key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+    tx.onabort = () => { db.close(); reject(tx.error || new Error('IndexedDB tx aborted')); };
+  });
+}
+
+async function idbGet(key) {
+  const db = await openArticleDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ARTICLE_DB_STORE, 'readonly');
+    const req = tx.objectStore(ARTICLE_DB_STORE).get(key);
+    req.onsuccess = () => { db.close(); resolve(req.result); };
+    req.onerror = () => { db.close(); reject(req.error); };
+  });
+}
+
+function reviveStoredArticles(stored) {
+  return stored.map(a => ({
+    ...a,
+    pubDate: a.pubDate ? new Date(a.pubDate) : new Date(0),
+  }));
+}
+
+async function loadStoredArticles() {
+  if (!articleDbFailed) {
+    try {
+      const stored = await idbGet('articles');
+      if (Array.isArray(stored)) return reviveStoredArticles(stored);
+    } catch (e) {
+      console.warn('[RSS] IndexedDB読み込み失敗。localStorageを使用します', e);
+      articleDbFailed = true;
+    }
+  }
+  // 旧形式（localStorage）からの読み込み・移行
   try {
-    const stored = JSON.parse(localStorage.getItem('rss-articles') || '[]');
-    return stored.map(a => ({
-      ...a,
-      pubDate: a.pubDate ? new Date(a.pubDate) : new Date(0),
-    }));
-  } catch { return []; }
-})();
+    const raw = localStorage.getItem('rss-articles');
+    if (!raw) return [];
+    const stored = JSON.parse(raw);
+    if (!Array.isArray(stored)) return [];
+    if (!articleDbFailed) {
+      idbSet('articles', stored)
+        .then(() => { try { localStorage.removeItem('rss-articles'); } catch {} })
+        .catch(() => { articleDbFailed = true; });
+    }
+    return reviveStoredArticles(stored);
+  } catch {
+    return [];
+  }
+}
 let filteredArticles = [];
 let selectedFeedUrl = null; // null = すべて / 'READ_LATER' / 'FOLDER:名前' / フィードURL
 let prevFeedUrlBeforeReadLater = null;
@@ -3400,6 +3674,105 @@ let savedUrls = new Set(savedArticles.map(a => a.link).filter(Boolean));
 // 新着記事URL（更新で新たに取得された記事）
 let newArticleLinks = new Set();
 let isRefreshing = false;
+
+// 既読記事URL（localStorageで永続化、クラウド同期対象外）
+let readUrls = new Set((() => { try { return JSON.parse(localStorage.getItem('rss-read') || '[]'); } catch { return []; } })());
+let unreadOnly = false;
+
+function saveRead() {
+  try {
+    // 肥大化防止: 現存する記事・保存記事・ピンに含まれないURLは間引く
+    if (readUrls.size > 3000) {
+      const keep = new Set([
+        ...allArticles.map(a => a.link),
+        ...savedArticles.map(a => a.link),
+        ...pinnedUrls,
+      ].filter(Boolean));
+      readUrls = new Set([...readUrls].filter(url => keep.has(url)));
+    }
+    localStorage.setItem('rss-read', JSON.stringify([...readUrls]));
+  } catch {}
+}
+
+let _saveReadTimer = null;
+function saveReadDebounced() {
+  clearTimeout(_saveReadTimer);
+  _saveReadTimer = setTimeout(saveRead, 400);
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveRead();
+});
+
+function markArticleAsRead(article, index) {
+  if (!article?.link || readUrls.has(article.link)) return;
+  readUrls.add(article.link);
+  saveReadDebounced();
+  if (index !== undefined) {
+    const el = document.querySelector(`.article-item[data-index="${index}"]`);
+    if (el) el.classList.add('read');
+  }
+  renderFeedSelect();
+}
+
+function markAllVisibleAsRead() {
+  const targets = filteredArticles.filter(a => a.link && !readUrls.has(a.link));
+  if (targets.length === 0) { showStatus('未読の記事がありません'); return; }
+  targets.forEach(a => readUrls.add(a.link));
+  saveRead();
+  renderFeedSelect();
+  applyFilter();
+  showStatus(`${targets.length}件を既読にしました`);
+}
+
+// 記事検索
+let searchQuery = '';
+
+function articleMatchesSearch(article, query) {
+  if ((article.title || '').toLowerCase().includes(query)) return true;
+  if (getFeedTitle(article.feedUrl).toLowerCase().includes(query)) return true;
+  const text = String(article.content || '').replace(/<[^>]+>/g, ' ').toLowerCase();
+  return text.includes(query);
+}
+
+// フィード健全性: { url: { ok, at(ISO), error, failCount } }
+let feedHealth = (() => { try { return JSON.parse(localStorage.getItem('rss-feed-health') || '{}'); } catch { return {}; } })();
+
+function saveFeedHealth() {
+  try {
+    // 削除済みフィードの記録を除去
+    Object.keys(feedHealth).forEach(url => {
+      if (!feeds.find(f => f.url === url)) delete feedHealth[url];
+    });
+    localStorage.setItem('rss-feed-health', JSON.stringify(feedHealth));
+  } catch {}
+}
+
+function recordFeedHealth(url, ok, error) {
+  const prev = feedHealth[url] || { failCount: 0 };
+  feedHealth[url] = ok
+    ? { ok: true, at: new Date().toISOString(), error: '', failCount: 0 }
+    : { ok: false, at: prev.ok ? prev.at : (prev.at || ''), error: String(error?.message || error || '取得失敗'), failCount: (prev.failCount || 0) + 1 };
+}
+
+function isFeedUnhealthy(url) {
+  return (feedHealth[url]?.failCount || 0) >= 2;
+}
+
+// 自動更新（分、0 = オフ、最小15）
+const AUTO_REFRESH_MIN_MINUTES = 15;
+let autoRefreshMinutes = (() => {
+  const n = parseInt(localStorage.getItem('rss-auto-refresh-min') || '0', 10);
+  return Number.isFinite(n) && n > 0 ? Math.max(AUTO_REFRESH_MIN_MINUTES, n) : 0;
+})();
+let lastAutoRefreshAt = Date.now();
+
+setInterval(() => {
+  if (!autoRefreshMinutes) return;
+  if (document.visibilityState !== 'visible' || isRefreshing) return;
+  if (Date.now() - lastAutoRefreshAt < autoRefreshMinutes * 60000) return;
+  lastAutoRefreshAt = Date.now();
+  refreshAll();
+}, 60000);
 
 function syncSavedUrls() {
   savedUrls = new Set(savedArticles.map(a => a.link).filter(Boolean));
@@ -4130,23 +4503,35 @@ function saveFeeds(options = {}) {
 }
 
 function saveArticles() {
+  const data = allArticles.map(a => ({
+    ...a,
+    pubDate: a.pubDate instanceof Date ? a.pubDate.toISOString() : (a.pubDate || null),
+  }));
+  if (!articleDbFailed) {
+    idbSet('articles', data).catch(e => {
+      console.warn('[RSS] IndexedDB保存失敗。localStorageに切り替えます', e);
+      articleDbFailed = true;
+      saveArticlesToLocalStorage(data);
+    });
+    return;
+  }
+  saveArticlesToLocalStorage(data);
+}
+
+function saveArticlesToLocalStorage(data) {
   try {
-    const data = allArticles.map(a => ({
-      ...a,
-      pubDate: a.pubDate instanceof Date ? a.pubDate.toISOString() : (a.pubDate || null),
-    }));
     localStorage.setItem('rss-articles', JSON.stringify(data));
   } catch (e) {
     // ストレージ容量超過時はcontentを省いて再試行
     try {
-      const data = allArticles.map(a => ({
+      const slim = data.map(a => ({
         title: a.title,
         link: a.link,
         feedUrl: a.feedUrl,
         image: a.image || null,
-        pubDate: a.pubDate instanceof Date ? a.pubDate.toISOString() : (a.pubDate || null),
+        pubDate: a.pubDate,
       }));
-      localStorage.setItem('rss-articles', JSON.stringify(data));
+      localStorage.setItem('rss-articles', JSON.stringify(slim));
       showStatus('ストレージ容量不足のため、記事本文を省略して保存しました', 6000);
     } catch {}
   }
@@ -4228,16 +4613,20 @@ async function refreshFeed(url, skipSave = false) {
     allArticles = allArticles.filter(a => a.feedUrl !== url).concat(articles);
     allArticles.sort((a, b) => b.pubDate - a.pubDate);
     articles.forEach(a => { if (a.link && !oldLinks.has(a.link)) newArticleLinks.add(a.link); });
+    recordFeedHealth(url, true);
     return { ok: true, count: articles.length };
   } catch (e) {
     console.error(`Failed to refresh ${url}:`, e);
+    recordFeedHealth(url, false, e);
     return { ok: false, count: 0, error: e, url };
   } finally {
-    if (!skipSave) saveArticles();
+    if (!skipSave) { saveArticles(); saveFeedHealth(); }
   }
 }
 
 async function refreshSingleFeed(url, spinBtn) {
+  if (isRefreshing) { showStatus('更新中です。完了までお待ちください'); return; }
+  isRefreshing = true;
   newArticleLinks.clear();
   if (spinBtn) { spinBtn.classList.add('spinning'); spinBtn.disabled = true; }
   const titleRefreshBtn = document.getElementById('feed-refresh-btn');
@@ -4256,6 +4645,7 @@ async function refreshSingleFeed(url, spinBtn) {
   } catch {
     showStatus('更新に失敗しました');
   } finally {
+    isRefreshing = false;
     if (spinBtn) { spinBtn.classList.remove('spinning'); spinBtn.disabled = false; }
     if (titleRefreshBtn && selectedFeedUrl === url) {
       titleRefreshBtn.classList.remove('spinning'); titleRefreshBtn.disabled = false;
@@ -4264,8 +4654,10 @@ async function refreshSingleFeed(url, spinBtn) {
 }
 
 async function refreshFolder(folderName, spinBtn) {
+  if (isRefreshing) { showStatus('更新中です。完了までお待ちください'); return; }
   const targets = getFolderFeeds(folderName);
   if (targets.length === 0) { showStatus('このフォルダにフィードがありません'); return; }
+  isRefreshing = true;
   newArticleLinks.clear();
   if (spinBtn) { spinBtn.classList.add('spinning'); spinBtn.disabled = true; }
   try {
@@ -4275,6 +4667,7 @@ async function refreshFolder(folderName, spinBtn) {
       if (!result.ok) failed++;
     }
     saveArticles();
+    saveFeedHealth();
     renderFeedSelect();
     applyFilter();
     if (failed > 0) {
@@ -4283,6 +4676,7 @@ async function refreshFolder(folderName, spinBtn) {
       showStatus(`フォルダ「${folderName}」の${targets.length}フィードを更新しました`);
     }
   } finally {
+    isRefreshing = false;
     if (spinBtn) { spinBtn.classList.remove('spinning'); spinBtn.disabled = false; }
   }
 }
@@ -4290,6 +4684,7 @@ async function refreshFolder(folderName, spinBtn) {
 async function refreshAll() {
   if (isRefreshing) return;
   isRefreshing = true;
+  lastAutoRefreshAt = Date.now();
   newArticleLinks.clear();
   if (feeds.length === 0) { isRefreshing = false; showStatus('フィードが登録されていません'); return; }
   const spinner = document.getElementById('loading-spinner');
@@ -4318,6 +4713,7 @@ async function refreshAll() {
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
   } finally {
     saveArticles();
+    saveFeedHealth();
     renderFeedSelect();
     applyFilter();
     spinner.style.display = 'none';
@@ -4337,6 +4733,8 @@ function deleteFeed(url) {
   saveFeeds();
   allArticles = allArticles.filter(a => a.feedUrl !== url);
   saveArticles();
+  if (proxyCache[url]) { delete proxyCache[url]; saveProxyCache(); }
+  if (feedHealth[url]) { delete feedHealth[url]; saveFeedHealth(); }
   if (selectedFeedUrl === url) selectedFeedUrl = null;
   renderFeedSelect();
   applyFilter();
@@ -4379,15 +4777,28 @@ function selectValueToFeed(value) {
   return value;
 }
 
+function getUnreadCountByFeed() {
+  const counts = new Map();
+  allArticles.forEach(a => {
+    if (!a.link || readUrls.has(a.link)) return;
+    counts.set(a.feedUrl, (counts.get(a.feedUrl) || 0) + 1);
+  });
+  return counts;
+}
+
 function renderFeedSelect() {
   const select = document.getElementById('feed-filter-select');
   if (!select) return;
   const currentValue = selectedFeedToSelectValue();
   select.innerHTML = '';
 
+  const unreadCounts = getUnreadCountByFeed();
+  const totalUnread = [...unreadCounts.values()].reduce((sum, n) => sum + n, 0);
+  const unreadSuffix = n => n > 0 ? ` (${n})` : '';
+
   const allOption = document.createElement('option');
   allOption.value = '__all__';
-  allOption.textContent = 'すべてのフィード';
+  allOption.textContent = `すべてのフィード${unreadSuffix(totalUnread)}`;
   allOption.className = 'feed-filter-primary';
   select.appendChild(allOption);
 
@@ -4421,15 +4832,17 @@ function renderFeedSelect() {
   const appendFeedOption = (feed, indent) => {
     const option = document.createElement('option');
     option.value = feed.url;
-    option.textContent = (indent ? '　' : '') + getFeedTitle(feed.url);
+    const warn = isFeedUnhealthy(feed.url) ? '⚠ ' : '';
+    option.textContent = (indent ? '　' : '') + warn + getFeedTitle(feed.url) + unreadSuffix(unreadCounts.get(feed.url) || 0);
     select.appendChild(option);
   };
 
   folderOrder.forEach(folderName => {
     const folderFeeds = feedsByFolder.get(folderName);
+    const folderUnread = folderFeeds.reduce((sum, feed) => sum + (unreadCounts.get(feed.url) || 0), 0);
     const folderOption = document.createElement('option');
     folderOption.value = FOLDER_SELECT_PREFIX + folderName;
-    folderOption.textContent = `📁 ${folderName} (${folderFeeds.length})`;
+    folderOption.textContent = `📁 ${folderName} (${folderFeeds.length})${unreadSuffix(folderUnread)}`;
     folderOption.className = 'feed-filter-folder';
     select.appendChild(folderOption);
     folderFeeds.forEach(feed => appendFeedOption(feed, true));
@@ -4470,6 +4883,12 @@ function applyFilter() {
   } else {
     filteredArticles = allArticles.filter(a => a.feedUrl === selectedFeedUrl);
   }
+  if (unreadOnly && selectedFeedUrl !== 'READ_LATER') {
+    filteredArticles = filteredArticles.filter(a => !a.link || !readUrls.has(a.link));
+  }
+  if (searchQuery) {
+    filteredArticles = filteredArticles.filter(a => articleMatchesSearch(a, searchQuery));
+  }
   if (filteredArticles.length === 0 || currentIndex >= filteredArticles.length) currentIndex = -1;
   document.getElementById('article-count').textContent = `${filteredArticles.length}件`;
   updateFeedTitleBar();
@@ -4490,6 +4909,8 @@ function updateFeedTitleBar() {
   const refreshBtn = document.getElementById('feed-refresh-btn');
   const deleteBtn = document.getElementById('feed-delete-btn');
   const folderBtn = document.getElementById('feed-folder-btn');
+  const healthEl = document.getElementById('feed-health-text');
+  if (healthEl) { healthEl.textContent = ''; healthEl.classList.remove('warn'); }
 
   if (isFolderSelection(selectedFeedUrl)) {
     const folderName = selectedFolderName();
@@ -4518,6 +4939,18 @@ function updateFeedTitleBar() {
 
   textEl.textContent = title;
   textEl.style.color = color;
+
+  if (healthEl) {
+    const health = feedHealth[selectedFeedUrl];
+    if (health) {
+      if (health.ok) {
+        healthEl.textContent = health.at ? `取得: ${formatDate(health.at)}` : '';
+      } else {
+        healthEl.textContent = `取得失敗×${health.failCount}（${health.error}）`;
+        healthEl.classList.add('warn');
+      }
+    }
+  }
 
   linkBtn.style.display = '';
   deleteBtn.style.display = '';
@@ -4554,8 +4987,9 @@ function renderArticleList() {
     const isPinned = pinnedUrls.has(article.link);
     const isSaved = savedUrls.has(article.link);
     const isNew = newArticleLinks.has(article.link);
+    const isRead = !!article.link && readUrls.has(article.link);
     const hasImage = !!article.image;
-    div.className = 'article-item' + (index === currentIndex ? ' active' : '') + (isPinned ? ' pinned' : '') + (isSaved ? ' saved' : '') + (isNew ? ' is-new' : '') + (hasImage ? ' has-image' : '');
+    div.className = 'article-item' + (index === currentIndex ? ' active' : '') + (isPinned ? ' pinned' : '') + (isSaved ? ' saved' : '') + (isNew ? ' is-new' : '') + (hasImage ? ' has-image' : '') + (isRead ? ' read' : '');
     div.dataset.index = index;
 
     const color = getFeedColor(article.feedUrl);
@@ -4720,6 +5154,7 @@ function showDetail(index) {
   document.body.classList.add('mobile-detail-open');
   restoreMobileDetailNavPosition();
   const article = filteredArticles[index];
+  markArticleAsRead(article, index);
   emptyState.style.display = 'none';
   endState.style.display = 'none';
   header.style.display = 'block';
@@ -4790,7 +5225,7 @@ function sanitizeHTML(html) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
 
   // Remove dangerous elements
-  ['script', 'style', 'iframe', 'object', 'embed', 'form', 'base'].forEach(tag => {
+  ['script', 'style', 'iframe', 'object', 'embed', 'form', 'base', 'link', 'meta'].forEach(tag => {
     doc.querySelectorAll(tag).forEach(el => el.remove());
   });
 
@@ -4806,8 +5241,12 @@ function sanitizeHTML(html) {
     // Block non-image data: URIs in src
     const src = el.getAttribute('src') || '';
     if (/^data:/i.test(src) && !/^data:image\//i.test(src)) el.removeAttribute('src');
-    // Remove srcdoc (can execute arbitrary HTML)
+    // Block javascript:/data: in srcset
+    const srcset = el.getAttribute('srcset') || '';
+    if (/(javascript:|data:(?!image\/))/i.test(srcset)) el.removeAttribute('srcset');
+    // Remove srcdoc (can execute arbitrary HTML) and formaction
     el.removeAttribute('srcdoc');
+    el.removeAttribute('formaction');
     // Make links open in new tab
     if (el.tagName === 'A') {
       el.setAttribute('target', '_blank');
@@ -5201,9 +5640,39 @@ function initMobileDetailSwipeBack() {
   detailPanel.addEventListener('pointercancel', cancelSwipe);
 }
 
+function isAnyModalOpen() {
+  if (document.querySelector('#feed-modal-overlay.open, #folder-modal-overlay.open, #mobile-pin-modal-overlay.open, #shortcut-help-overlay.open')) return true;
+  const settings = document.getElementById('rss-settings-overlay');
+  if (settings && settings.style.display !== 'none' && settings.style.display !== '') return true;
+  return false;
+}
+
 document.addEventListener('keydown', (e) => {
-  // Ignore when typing in form fields
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  // IME変換中のキーは無視
+  if (e.isComposing || e.keyCode === 229) return;
+  // Ignore when typing in form fields / select focused / modal open
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
+  if (isAnyModalOpen()) {
+    if (e.key === 'Escape') closeTopModal();
+    return;
+  }
+
+  if (e.key === '?') {
+    e.preventDefault();
+    openShortcutHelp();
+    return;
+  }
+  if (e.key === '/') {
+    e.preventDefault();
+    document.getElementById('article-search-input')?.focus();
+    return;
+  }
+  if (e.key === 'A' && e.shiftKey) {
+    e.preventDefault();
+    markAllVisibleAsRead();
+    return;
+  }
 
   switch (e.key) {
     case 'j':
@@ -5313,6 +5782,7 @@ document.getElementById('add-btn').addEventListener('click', () => {
 });
 
 document.getElementById('feed-input').addEventListener('keydown', (e) => {
+  if (e.isComposing || e.keyCode === 229) return;
   if (e.key === 'Enter') {
     const input = e.target;
     addFeed(input.value);
@@ -5374,16 +5844,23 @@ document.getElementById('load-input').addEventListener('change', (e) => {
       saveFeeds();
 
       if (Array.isArray(data.pinned)) {
-        pinnedUrls = new Set(data.pinned);
+        pinnedUrls = new Set(data.pinned.filter(url => typeof url === 'string' && /^https?:\/\//i.test(url)));
         savePins();
       }
 
       if (Array.isArray(data.saved)) {
-        savedArticles = data.saved.map(a => ({
-          ...a,
-          pubDate: a.pubDate ? new Date(a.pubDate) : new Date(0),
-          savedAt: a.savedAt ? new Date(a.savedAt) : new Date(),
-        }));
+        savedArticles = data.saved
+          .filter(a => a && typeof a === 'object')
+          .map(a => ({
+            ...a,
+            title: typeof a.title === 'string' ? a.title : '',
+            link: normalizeHttpUrl(a.link),
+            image: normalizeHttpUrl(a.image),
+            content: typeof a.content === 'string' ? a.content : '',
+            pubDate: a.pubDate ? new Date(a.pubDate) : new Date(0),
+            savedAt: a.savedAt ? new Date(a.savedAt) : new Date(),
+          }))
+          .filter(a => a.link);
         savedUrls = new Set(savedArticles.map(a => a.link).filter(Boolean));
         saveSaved();
       }
@@ -5551,7 +6028,18 @@ window.addEventListener('resize', restoreMobileDetailNavPosition);
     setButtonHelp(document.getElementById('view-toggle-btn'), 'リスト表示');
     document.getElementById('detail-panel').classList.add('tile-hidden');
   }
-  if (supabaseClient && hasCloudConfig()) {
+
+  // 記事キャッシュを IndexedDB（なければ localStorage）から読み込む
+  allArticles = await loadStoredArticles();
+
+  // オフライン対応の Service Worker（http/https のみ。file:// では登録しない）
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.register('./sw.js').catch(e => {
+      console.warn('[RSS] Service Worker登録失敗', e);
+    });
+  }
+
+  if (cloudEnabled) {
     if (hasLocalFeeds()) {
       updateCloudStatus('online');
       showStatus('ローカルにフィードがあります。サーバーへ保存するには設定の「同期」を押してください。', 7000);
@@ -5644,6 +6132,107 @@ function showFeedSelectModal(discovered, siteUrl) {
 
 function closeFeedSelectModal() {
   document.getElementById('feed-modal-overlay').classList.remove('open');
+}
+
+function cancelFeedSelectModal() {
+  closeFeedSelectModal();
+  const btn = document.getElementById('add-btn');
+  btn.disabled = false;
+  btn.textContent = 'add';
+  showStatus('キャンセルしました');
+}
+
+// ============================================================
+// ショートカットヘルプ / モーダル共通クローズ
+// ============================================================
+function openShortcutHelp() {
+  document.getElementById('shortcut-help-overlay').classList.add('open');
+}
+
+function closeShortcutHelp() {
+  document.getElementById('shortcut-help-overlay').classList.remove('open');
+}
+
+function closeTopModal() {
+  const help = document.getElementById('shortcut-help-overlay');
+  if (help.classList.contains('open')) { closeShortcutHelp(); return; }
+  const settings = document.getElementById('rss-settings-overlay');
+  if (settings.style.display && settings.style.display !== 'none') { settings.style.display = 'none'; return; }
+  if (document.getElementById('folder-modal-overlay').classList.contains('open')) { closeFolderModal(); return; }
+  if (document.getElementById('feed-modal-overlay').classList.contains('open')) { cancelFeedSelectModal(); return; }
+  if (document.getElementById('mobile-pin-modal-overlay').classList.contains('open')) { closeMobilePinModal(true); return; }
+}
+
+// ============================================================
+// OPML インポート / エクスポート
+// ============================================================
+function buildOpml() {
+  const escapeXmlAttr = value => escapeHtml(value).replace(/'/g, '&#39;');
+  const lines = [];
+  lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+  lines.push('<opml version="2.0">');
+  lines.push(`  <head><title>RSS Reader feeds</title><dateCreated>${new Date().toUTCString()}</dateCreated></head>`);
+  lines.push('  <body>');
+  const outlineFor = feed =>
+    `<outline type="rss" text="${escapeXmlAttr(getFeedTitle(feed.url))}" title="${escapeXmlAttr(getFeedTitle(feed.url))}" xmlUrl="${escapeXmlAttr(feed.url)}"/>`;
+  const folders = new Map();
+  const uncategorized = [];
+  feeds.forEach(feed => {
+    const folderName = getFeedFolder(feed);
+    if (!folderName) { uncategorized.push(feed); return; }
+    if (!folders.has(folderName)) folders.set(folderName, []);
+    folders.get(folderName).push(feed);
+  });
+  folders.forEach((folderFeeds, folderName) => {
+    lines.push(`    <outline text="${escapeXmlAttr(folderName)}" title="${escapeXmlAttr(folderName)}">`);
+    folderFeeds.forEach(feed => lines.push(`      ${outlineFor(feed)}`));
+    lines.push('    </outline>');
+  });
+  uncategorized.forEach(feed => lines.push(`    ${outlineFor(feed)}`));
+  lines.push('  </body>');
+  lines.push('</opml>');
+  return lines.join('\n');
+}
+
+function exportOpml() {
+  if (feeds.length === 0) { showStatus('フィードが登録されていません'); return; }
+  const blob = new Blob([buildOpml()], { type: 'text/x-opml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rss-reader-feeds-${new Date().toISOString().slice(0, 10)}.opml`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showStatus(`${feeds.length}件のフィードをOPMLに書き出しました`);
+}
+
+function importOpmlText(text) {
+  const doc = new DOMParser().parseFromString(text, 'text/xml');
+  if (doc.querySelector('parsererror')) throw new Error('OPMLの解析に失敗しました');
+  const outlines = doc.querySelectorAll('outline[xmlUrl], outline[xmlurl]');
+  let added = 0;
+  let skipped = 0;
+  outlines.forEach(outline => {
+    const url = normalizeHttpUrl(outline.getAttribute('xmlUrl') || outline.getAttribute('xmlurl'));
+    if (!url) return;
+    if (feeds.find(f => f.url === url)) { skipped++; return; }
+    // 親 outline（xmlUrl なし）をフォルダとして扱う
+    let folder = '';
+    const parent = outline.parentElement;
+    if (parent && parent.tagName === 'outline' && !parent.getAttribute('xmlUrl') && !parent.getAttribute('xmlurl')) {
+      folder = normalizeFolderName(parent.getAttribute('text') || parent.getAttribute('title'));
+    }
+    const title = (outline.getAttribute('title') || outline.getAttribute('text') || '').trim();
+    feeds.push({ url, title, color: COLORS[feeds.length % COLORS.length], folder });
+    added++;
+  });
+  if (added === 0 && skipped === 0) throw new Error('OPML内にフィードが見つかりません');
+  if (added > 0) {
+    saveFeeds();
+    renderFeedSelect();
+    applyFilter();
+  }
+  showStatus(`OPMLから${added}件を追加しました（既存${skipped}件はスキップ）。更新ボタンで記事を取得してください。`, 6000);
 }
 
 // ============================================================
@@ -5785,6 +6374,7 @@ document.getElementById('folder-modal-overlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) closeFolderModal();
 });
 document.getElementById('folder-modal-input').addEventListener('keydown', e => {
+  if (e.isComposing || e.keyCode === 229) return;
   if (e.key === 'Enter') { e.preventDefault(); applyFolderModal(); }
   if (e.key === 'Escape') { e.preventDefault(); closeFolderModal(); }
 });
@@ -5799,27 +6389,74 @@ document.getElementById('folder-modal-input').addEventListener('input', e => {
   }
 });
 
-document.getElementById('feed-modal-cancel').addEventListener('click', () => {
-  closeFeedSelectModal();
-  const btn = document.getElementById('add-btn');
-  btn.disabled = false;
-  btn.textContent = 'add';
-  showStatus('キャンセルしました');
-});
+document.getElementById('feed-modal-cancel').addEventListener('click', cancelFeedSelectModal);
 
 document.getElementById('feed-modal-overlay').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) {
-    closeFeedSelectModal();
-    const btn = document.getElementById('add-btn');
-    btn.disabled = false;
-    btn.textContent = 'add';
-    showStatus('キャンセルしました');
+  if (e.target === e.currentTarget) cancelFeedSelectModal();
+});
+
+// 記事検索・未読フィルタ
+let _searchTimer = null;
+document.getElementById('article-search-input').addEventListener('input', e => {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => {
+    searchQuery = e.target.value.trim().toLowerCase();
+    applyFilter();
+  }, 200);
+});
+document.getElementById('article-search-input').addEventListener('keydown', e => {
+  // IME変換中（日本語入力の確定Enter等）は無視。blurすると確定文字が二重挿入される
+  if (e.isComposing || e.keyCode === 229) return;
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    e.target.value = '';
+    searchQuery = '';
+    applyFilter();
+    e.target.blur();
   }
+  if (e.key === 'Enter') e.target.blur();
+});
+document.getElementById('unread-only-btn').addEventListener('click', () => {
+  unreadOnly = !unreadOnly;
+  const btn = document.getElementById('unread-only-btn');
+  btn.classList.toggle('active', unreadOnly);
+  btn.setAttribute('aria-pressed', unreadOnly ? 'true' : 'false');
+  currentIndex = -1;
+  applyFilter();
+  showDetail(-1);
+});
+document.getElementById('mark-read-btn').addEventListener('click', markAllVisibleAsRead);
+
+// ショートカットヘルプ
+document.getElementById('shortcut-help-close').addEventListener('click', closeShortcutHelp);
+document.getElementById('shortcut-help-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeShortcutHelp();
+});
+
+// OPML
+document.getElementById('opml-export-btn').addEventListener('click', exportOpml);
+document.getElementById('opml-import-btn').addEventListener('click', () => {
+  document.getElementById('opml-import-input').click();
+});
+document.getElementById('opml-import-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      importOpmlText(ev.target.result);
+    } catch (err) {
+      showStatus(`OPML読み込み失敗: ${err.message}`, 5000);
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
 });
 
 // Settings modal
 document.getElementById('settings-btn').addEventListener('click', () => {
   document.getElementById('rss-custom-proxy-input').value = customProxyUrl;
+  document.getElementById('rss-auto-refresh-input').value = autoRefreshMinutes || '';
   document.getElementById('cloud-supabase-url-input').value = cloudConfig.url || '';
   document.getElementById('cloud-supabase-key-input').value = cloudConfig.anonKey || '';
   document.getElementById('cloud-profile-id-input').value = cloudConfig.profileId || DEFAULT_PROFILE_ID;
@@ -5835,13 +6472,21 @@ document.getElementById('rss-settings-overlay').addEventListener('click', e => {
 document.getElementById('rss-settings-save-btn').addEventListener('click', async () => {
   customProxyUrl = document.getElementById('rss-custom-proxy-input').value.trim();
   try { localStorage.setItem('rss-custom-proxy', customProxyUrl); } catch {}
+  const autoInput = parseInt(document.getElementById('rss-auto-refresh-input').value, 10);
+  const nextAuto = Number.isFinite(autoInput) && autoInput > 0 ? Math.max(AUTO_REFRESH_MIN_MINUTES, autoInput) : 0;
+  if (nextAuto !== autoRefreshMinutes) {
+    autoRefreshMinutes = nextAuto;
+    lastAutoRefreshAt = Date.now();
+    try { localStorage.setItem('rss-auto-refresh-min', String(autoRefreshMinutes)); } catch {}
+    showStatus(autoRefreshMinutes ? `自動更新を${autoRefreshMinutes}分間隔に設定しました` : '自動更新をオフにしました', 4000);
+  }
   saveCloudConfig({
     url: document.getElementById('cloud-supabase-url-input').value,
     anonKey: document.getElementById('cloud-supabase-key-input').value,
     profileId: document.getElementById('cloud-profile-id-input').value,
   });
   document.getElementById('rss-settings-overlay').style.display = 'none';
-  if (supabaseClient) {
+  if (cloudEnabled) {
     if (hasLocalFeeds()) {
       await pushCloudState('manual');
     } else {
@@ -5853,7 +6498,7 @@ document.getElementById('rss-settings-save-btn').addEventListener('click', async
     applyFilter();
     return;
   }
-  showStatus(supabaseClient ? '設定を保存し、同期を有効にしました' : (customProxyUrl ? 'カスタムプロキシを設定しました' : 'ローカルモードで使用します'));
+  showStatus(customProxyUrl ? 'カスタムプロキシを設定しました' : 'ローカルモードで使用します');
 });
 
 document.getElementById('cloud-sync-now-btn').addEventListener('click', async () => {
@@ -5862,7 +6507,7 @@ document.getElementById('cloud-sync-now-btn').addEventListener('click', async ()
     anonKey: document.getElementById('cloud-supabase-key-input').value,
     profileId: document.getElementById('cloud-profile-id-input').value,
   });
-  if (!supabaseClient) {
+  if (!cloudEnabled) {
     showStatus('Supabase URL / anon key / 共有IDを入力してください', 4000);
     return;
   }
