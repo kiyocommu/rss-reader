@@ -811,7 +811,8 @@
     #main.tile-mode .article-actions { flex-direction: row; gap: 4px; }
 
     /* View mode toggle button */
-    #view-toggle-btn {
+    #view-toggle-btn,
+    #search-toggle-btn {
       background: none;
       border: 1px solid #0f3460;
       border-radius: 4px;
@@ -822,8 +823,21 @@
       transition: color 0.15s, border-color 0.15s;
       line-height: 1;
     }
-    #view-toggle-btn:hover { color: #c8d6e5; border-color: #3d5f84; }
-    #view-toggle-btn.active { color: #e94560; border-color: #e94560; }
+    #view-toggle-btn:hover,
+    #search-toggle-btn:hover { color: #c8d6e5; border-color: #3d5f84; }
+    #view-toggle-btn.active,
+    #search-toggle-btn.active { color: #e94560; border-color: #e94560; }
+
+    /* 検索バー切替（絵文字ボタンのため filter で非アクティブ表現） */
+    #search-toggle-btn {
+      font-size: 12px;
+      padding: 3px 6px;
+      filter: grayscale(1);
+      opacity: 0.75;
+      transition: color 0.15s, border-color 0.15s, filter 0.15s, opacity 0.15s;
+    }
+    #search-toggle-btn:hover { opacity: 1; }
+    #search-toggle-btn.active { filter: none; opacity: 1; }
 
     #saved-export-btn {
       display: none;
@@ -1900,17 +1914,20 @@
     body.light .article-item .article-meta { color: var(--rss-muted); }
     body.light .article-date.recent { color: var(--rss-text); }
     body.light #view-toggle-btn,
+    body.light #search-toggle-btn,
     body.light #saved-export-btn {
       border-color: var(--rss-border);
       color: var(--rss-muted);
     }
     body.light #view-toggle-btn:hover,
+    body.light #search-toggle-btn:hover,
     body.light #saved-export-btn:hover {
       color: var(--rss-text);
       border-color: var(--rss-accent);
       background: var(--rss-panel-soft);
     }
-    body.light #view-toggle-btn.active { color: var(--rss-accent); border-color: var(--rss-accent); }
+    body.light #view-toggle-btn.active,
+    body.light #search-toggle-btn.active { color: var(--rss-accent); border-color: var(--rss-accent); }
     body.light #main.tile-mode .article-item { border: 0; background: color-mix(in srgb, var(--rss-panel) 92%, var(--rss-panel-soft)); }
     body.light #main.tile-mode .article-item:hover { background: var(--rss-panel-soft); }
     body.light #main.tile-mode .article-item.active {
@@ -2719,7 +2736,8 @@
       .cloud-status-pill { display: none; }
     }
 
-    /* 記事検索バー・未読フィルタ */
+    /* 記事検索バー・未読フィルタ（既定は非表示。.open で表示） */
+    #article-search-bar:not(.open) { display: none; }
     #article-search-bar {
       display: flex;
       align-items: center;
@@ -2878,7 +2896,8 @@
     }
 
     @media (max-width: 760px) {
-      #article-search-bar { padding: 6px 12px; }
+      /* モバイルでは記事一覧ヘッダー（切替ボタンの置き場所）がないため、検索バーは常に非表示 */
+      #article-search-bar { display: none !important; }
     }
   </style>
 </head>
@@ -2922,6 +2941,7 @@
       </span>
       <div style="display:flex;align-items:center;gap:6px;">
         <span id="article-count"></span>
+        <button id="search-toggle-btn" data-tooltip="検索・未読フィルタを表示" data-tooltip-align="right" aria-label="検索・未読フィルタを表示" aria-expanded="false">🔍</button>
         <button id="saved-export-btn" data-tooltip="Tab Bookmark Manager用に書き出す" aria-label="Tab Bookmark Manager用にエクスポート">export</button>
         <button id="view-toggle-btn" data-tooltip="タイル表示" data-tooltip-align="right" aria-label="タイル表示">⊞</button>
       </div>
@@ -3226,7 +3246,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-04.design-polish';
+const APP_VERSION = '2026-07-04.search-bar-toggle';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
@@ -5751,6 +5771,7 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === '/') {
     e.preventDefault();
+    setSearchBarOpen(true);
     document.getElementById('article-search-input')?.focus();
     return;
   }
@@ -6113,6 +6134,9 @@ window.addEventListener('resize', restoreMobileDetailNavPosition);
     document.getElementById('view-toggle-btn').classList.add('active');
     setButtonHelp(document.getElementById('view-toggle-btn'), 'リスト表示');
     document.getElementById('detail-panel').classList.add('tile-hidden');
+  }
+  if (localStorage.getItem('rss-search-bar') === 'open') {
+    setSearchBarOpen(true);
   }
 
   // 記事キャッシュを IndexedDB（なければ localStorage）から読み込む
@@ -6479,6 +6503,35 @@ document.getElementById('feed-modal-cancel').addEventListener('click', cancelFee
 
 document.getElementById('feed-modal-overlay').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) cancelFeedSelectModal();
+});
+
+// 検索バーの表示/非表示（既定は非表示。状態は localStorage に記憶）
+function setSearchBarOpen(open) {
+  const bar = document.getElementById('article-search-bar');
+  const btn = document.getElementById('search-toggle-btn');
+  if (!bar || !btn) return;
+  bar.classList.toggle('open', open);
+  btn.classList.toggle('active', open);
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  setButtonHelp(btn, open ? '検索・未読フィルタを隠す' : '検索・未読フィルタを表示');
+  localStorage.setItem('rss-search-bar', open ? 'open' : 'closed');
+  if (!open) {
+    // 隠れたフィルタで記事が絞り込まれたままにならないよう、閉じるときは検索と未読フィルタを解除する
+    const input = document.getElementById('article-search-input');
+    const hadFilter = searchQuery !== '' || unreadOnly;
+    if (input) input.value = '';
+    searchQuery = '';
+    if (unreadOnly) {
+      unreadOnly = false;
+      const unreadBtn = document.getElementById('unread-only-btn');
+      unreadBtn.classList.remove('active');
+      unreadBtn.setAttribute('aria-pressed', 'false');
+    }
+    if (hadFilter) applyFilter();
+  }
+}
+document.getElementById('search-toggle-btn').addEventListener('click', () => {
+  setSearchBarOpen(!document.getElementById('article-search-bar').classList.contains('open'));
 });
 
 // 記事検索・未読フィルタ
