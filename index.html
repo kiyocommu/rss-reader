@@ -2896,8 +2896,13 @@
     }
 
     @media (max-width: 760px) {
-      /* モバイルでは記事一覧ヘッダー（切替ボタンの置き場所）がないため、検索バーは常に非表示 */
+      /* モバイルでは記事一覧ヘッダー（切替ボタンの置き場所）がないため、
+         Feedボタンでフィード選択を開いている間だけフィード選択の下に表示する */
       #article-search-bar { display: none !important; }
+      body.mobile-feed-filter-open #article-search-bar {
+        display: flex !important;
+        padding: 8px 12px;
+      }
     }
   </style>
 </head>
@@ -3246,7 +3251,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-04.search-bar-toggle';
+const APP_VERSION = '2026-07-04.mobile-search-bar';
 const DEFAULT_PROFILE_ID = 'default';
 let cloudConfig = (() => {
   try {
@@ -5868,8 +5873,11 @@ function setMobileFeedInputOpen(open) {
 }
 
 function setMobileFeedFilterOpen(open) {
+  const wasOpen = document.body.classList.contains('mobile-feed-filter-open');
   document.body.classList.toggle('mobile-feed-filter-open', open);
   if (open) setMobileFeedInputOpen(false);
+  // モバイルの検索バーはフィード選択と一緒に閉じるため、隠れたフィルタが残らないよう解除する
+  if (!open && wasOpen && window.matchMedia('(max-width: 760px)').matches) clearSearchFilters();
   const btn = document.getElementById('mobile-feed-filter-toggle');
   if (!btn) return;
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -6515,20 +6523,23 @@ function setSearchBarOpen(open) {
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   setButtonHelp(btn, open ? '検索・未読フィルタを隠す' : '検索・未読フィルタを表示');
   localStorage.setItem('rss-search-bar', open ? 'open' : 'closed');
-  if (!open) {
-    // 隠れたフィルタで記事が絞り込まれたままにならないよう、閉じるときは検索と未読フィルタを解除する
-    const input = document.getElementById('article-search-input');
-    const hadFilter = searchQuery !== '' || unreadOnly;
-    if (input) input.value = '';
-    searchQuery = '';
-    if (unreadOnly) {
-      unreadOnly = false;
-      const unreadBtn = document.getElementById('unread-only-btn');
-      unreadBtn.classList.remove('active');
-      unreadBtn.setAttribute('aria-pressed', 'false');
-    }
-    if (hadFilter) applyFilter();
+  // 隠れたフィルタで記事が絞り込まれたままにならないよう、閉じるときは検索と未読フィルタを解除する
+  if (!open) clearSearchFilters();
+}
+
+// 検索テキストと「未読のみ表示」を解除する（検索バーを閉じるときに使う）
+function clearSearchFilters() {
+  const input = document.getElementById('article-search-input');
+  const hadFilter = searchQuery !== '' || unreadOnly;
+  if (input) input.value = '';
+  searchQuery = '';
+  if (unreadOnly) {
+    unreadOnly = false;
+    const unreadBtn = document.getElementById('unread-only-btn');
+    unreadBtn.classList.remove('active');
+    unreadBtn.setAttribute('aria-pressed', 'false');
   }
+  if (hadFilter) applyFilter();
 }
 document.getElementById('search-toggle-btn').addEventListener('click', () => {
   setSearchBarOpen(!document.getElementById('article-search-bar').classList.contains('open'));
