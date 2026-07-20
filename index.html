@@ -3396,7 +3396,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-20.browser-translation';
+const APP_VERSION = '2026-07-20.feed-date-fix';
 const DEFAULT_PROFILE_ID = 'default';
 const CONFIG_HASH_PREFIX = '#rss-config=';
 const QR_LIB_URL = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1/qrcode.min.js';
@@ -3558,7 +3558,7 @@ function serializeArticleForCloud(article) {
     link: article.link || '',
     title: article.title || article.link || '(タイトルなし)',
     feed_url: article.feedUrl || null,
-    pub_date: article.pubDate instanceof Date ? article.pubDate.toISOString() : (article.pubDate || null),
+    pub_date: serializeArticleDate(article.pubDate),
     image: article.image || null,
     content: article.content || '',
     saved_at: article.savedAt instanceof Date ? article.savedAt.toISOString() : (article.savedAt || new Date()).toISOString(),
@@ -3570,7 +3570,7 @@ function cloudArticleToLocal(row) {
     title: row.title || row.link || '(タイトルなし)',
     link: row.link || '',
     feedUrl: row.feed_url || '',
-    pubDate: row.pub_date ? new Date(row.pub_date) : new Date(0),
+    pubDate: normalizeArticleDate(row.pub_date),
     image: row.image || '',
     content: row.content || '',
     savedAt: row.saved_at ? new Date(row.saved_at) : new Date(),
@@ -3954,10 +3954,28 @@ async function idbGet(key) {
   });
 }
 
+function normalizeArticleDate(value) {
+  if (value === null || value === undefined || value === '') return new Date(0);
+  let normalized = value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return new Date(0);
+    // JavaScriptが解釈しないRSSの日付表記（例: 金融庁の末尾JST）を数値オフセットへ直す。
+    normalized = trimmed.replace(/\s+JST$/i, ' +0900');
+  }
+  const date = value instanceof Date ? new Date(value.getTime()) : new Date(normalized);
+  return Number.isNaN(date.getTime()) ? new Date(0) : date;
+}
+
+function serializeArticleDate(value) {
+  if (value === null || value === undefined || value === '') return null;
+  return normalizeArticleDate(value).toISOString();
+}
+
 function reviveStoredArticles(stored) {
   return stored.map(a => ({
     ...a,
-    pubDate: a.pubDate ? new Date(a.pubDate) : new Date(0),
+    pubDate: normalizeArticleDate(a.pubDate),
   }));
 }
 
@@ -4032,9 +4050,7 @@ function hashTranslationValue(value) {
 
 function getArticleTranslationId(article) {
   if (article?.link) return article.link;
-  const pubDate = article?.pubDate instanceof Date
-    ? article.pubDate.toISOString()
-    : String(article?.pubDate || '');
+  const pubDate = serializeArticleDate(article?.pubDate) || '';
   return `${article?.feedUrl || ''}\n${pubDate}\n${article?.title || ''}`;
 }
 
@@ -4473,7 +4489,7 @@ let modalDraftPins = null; // ピンモーダル表示中の下書きセット
 // Read It Later: 保存した記事の配列（localStorageで永続化）
 let savedArticles = (() => { try { return JSON.parse(localStorage.getItem('rss-saved') || '[]'); } catch { return []; } })();
 savedArticles.forEach(a => {
-  if (a.pubDate) a.pubDate = new Date(a.pubDate);
+  if (a.pubDate) a.pubDate = normalizeArticleDate(a.pubDate);
   if (a.savedAt) a.savedAt = new Date(a.savedAt);
 });
 let savedUrls = new Set(savedArticles.map(a => a.link).filter(Boolean));
@@ -5286,7 +5302,7 @@ function parseFeed(xmlText, feedUrl) {
     articles.push({
       title,
       link,
-      pubDate: pubDate ? new Date(pubDate) : new Date(0),
+      pubDate: normalizeArticleDate(pubDate),
       content,
       image,
       feedUrl,
@@ -5310,7 +5326,7 @@ function parseFeed(xmlText, feedUrl) {
       articles.push({
         title,
         link,
-        pubDate: updated ? new Date(updated) : new Date(0),
+        pubDate: normalizeArticleDate(updated),
         content,
         image,
         feedUrl,
@@ -5336,7 +5352,7 @@ function saveFeeds(options = {}) {
 function saveArticles() {
   const data = allArticles.map(a => ({
     ...a,
-    pubDate: a.pubDate instanceof Date ? a.pubDate.toISOString() : (a.pubDate || null),
+    pubDate: serializeArticleDate(a.pubDate),
   }));
   if (!articleDbFailed) {
     idbSet('articles', data).catch(e => {
@@ -5543,18 +5559,27 @@ async function refreshAll() {
   try {
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
   } finally {
-    saveArticles();
-    saveFeedHealth();
-    renderFeedSelect();
-    applyFilter();
-    spinner.style.display = 'none';
-    hideRefreshLoader();
-    if (failures.length > 0) {
-      const failedNames = failures.slice(0, 3).map(f => getFeedTitle(f.url)).join('、');
-      const suffix = failures.length > 3 ? ` ほか${failures.length - 3}件` : '';
-      showStatus(`更新完了。一部失敗: ${failedNames}${suffix}`, 6000);
+    try {
+      saveArticles();
+      saveFeedHealth();
+      renderFeedSelect();
+      applyFilter();
+      if (failures.length > 0) {
+        const failedNames = failures.slice(0, 3).map(f => getFeedTitle(f.url)).join('、');
+        const suffix = failures.length > 3 ? ` ほか${failures.length - 3}件` : '';
+        showStatus(`更新完了。一部失敗: ${failedNames}${suffix}`, 6000);
+      }
+    } catch (err) {
+      console.error('[RSS] 全フィード更新の完了処理に失敗', err);
+      showStatus(`更新後の保存・表示に失敗しました: ${err.message || '原因不明'}`, 6000);
+    } finally {
+      spinner.style.display = 'none';
+      try {
+        hideRefreshLoader();
+      } finally {
+        isRefreshing = false;
+      }
     }
-    isRefreshing = false;
   }
 }
 
@@ -6695,7 +6720,7 @@ document.getElementById('load-input').addEventListener('change', (e) => {
             link: normalizeHttpUrl(a.link),
             image: normalizeHttpUrl(a.image),
             content: typeof a.content === 'string' ? a.content : '',
-            pubDate: a.pubDate ? new Date(a.pubDate) : new Date(0),
+            pubDate: normalizeArticleDate(a.pubDate),
             savedAt: a.savedAt ? new Date(a.savedAt) : new Date(),
           }))
           .filter(a => a.link);
