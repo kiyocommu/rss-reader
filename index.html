@@ -1161,6 +1161,15 @@
       text-underline-offset: 3px;
     }
 
+    #detail-title-translation {
+      margin-top: 8px;
+      color: #a9c9e8;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.55;
+    }
+    #detail-title-translation[hidden] { display: none; }
+
     #detail-meta {
       font-size: 12px;
       color: #9daabd;
@@ -1209,7 +1218,8 @@
       flex-wrap: wrap;
     }
     #detail-pin-badge,
-    #detail-save-badge {
+    #detail-save-badge,
+    #detail-translate-btn {
       display: inline-flex;
       align-items: center;
       gap: 3px;
@@ -1228,12 +1238,25 @@
       transition: background 0.15s, border-color 0.15s, color 0.15s, filter 0.15s, opacity 0.15s, box-shadow 0.15s;
     }
     #detail-pin-badge:hover,
-    #detail-save-badge:hover {
+    #detail-save-badge:hover,
+    #detail-translate-btn:hover {
       background: transparent;
       border-color: #567098;
       color: #d5dfec;
       filter: grayscale(0.35);
       opacity: 0.82;
+    }
+    #detail-translate-btn[hidden] { display: none; }
+    #detail-translate-btn:disabled {
+      cursor: wait;
+      opacity: 0.48;
+    }
+    #detail-translate-btn[aria-pressed="true"] {
+      background: rgba(80, 200, 120, 0.12);
+      border-color: rgba(80, 200, 120, 0.62);
+      color: #73d99a;
+      filter: none;
+      opacity: 1;
     }
     #detail-pin-badge {
       min-width: 45px;
@@ -1333,6 +1356,25 @@
     #detail-content th { background: rgba(15, 52, 96, 0.5); }
     #detail-content figure { margin: 12px 0; }
     #detail-content figcaption { font-size: 12px; color: #8b99b0; margin-top: 4px; }
+    #detail-translation {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid #46577c;
+    }
+    #detail-translation[hidden] { display: none; }
+    #detail-content #detail-translation-heading {
+      margin: 0 0 14px;
+      color: #73d99a;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    #detail-translation-body {
+      color: #d7deea;
+      line-height: 1.85;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
     body.light #detail-content blockquote { border-left-color: var(--rss-border); color: var(--rss-muted); }
     body.light #detail-content code { background: var(--rss-panel-soft); }
     body.light #detail-content pre { background: var(--rss-panel-soft); border-color: var(--rss-border); }
@@ -1341,6 +1383,9 @@
     body.light #detail-content th, body.light #detail-content td { border-color: var(--rss-border); }
     body.light #detail-content th { background: var(--rss-panel-soft); }
     body.light #detail-content figcaption { color: var(--rss-muted); }
+    body.light #detail-translation { border-top-color: var(--rss-border); }
+    body.light #detail-content #detail-translation-heading { color: #337b51; }
+    body.light #detail-translation-body { color: var(--rss-text); }
 
     /* Empty states */
     #empty-state {
@@ -1979,6 +2024,7 @@
     body.light #detail-panel { background: var(--rss-panel); }
     body.light #detail-header { border-bottom: none; background: var(--rss-panel); }
     body.light #detail-title { color: var(--rss-text); }
+    body.light #detail-title-translation { color: var(--rss-link); }
     body.light #detail-meta { color: var(--rss-muted); }
     body.light #detail-title[href]:hover,
     body.light #detail-title[href]:focus-visible { color: var(--rss-link); }
@@ -1990,14 +2036,16 @@
     body.light #detail-content h1, body.light #detail-content h2, body.light #detail-content h3 { color: var(--rss-text); }
     body.light #empty-state { color: var(--rss-muted); }
     body.light #detail-pin-badge,
-    body.light #detail-save-badge {
+    body.light #detail-save-badge,
+    body.light #detail-translate-btn {
       background: transparent;
       border-color: #C5CCE0;
       color: #8890aa;
       opacity: 0.56;
     }
     body.light #detail-pin-badge:hover,
-    body.light #detail-save-badge:hover {
+    body.light #detail-save-badge:hover,
+    body.light #detail-translate-btn:hover {
       background: transparent;
       border-color: #B8C2D8;
       color: #4a6090;
@@ -2016,6 +2064,13 @@
       background: color-mix(in srgb, var(--rss-link) 12%, var(--rss-panel));
       border-color: color-mix(in srgb, var(--rss-link) 55%, var(--rss-border));
       color: var(--rss-link);
+      filter: none;
+      opacity: 1;
+    }
+    body.light #detail-translate-btn[aria-pressed="true"] {
+      background: color-mix(in srgb, #337b51 10%, var(--rss-panel));
+      border-color: color-mix(in srgb, #337b51 58%, var(--rss-border));
+      color: #337b51;
       filter: none;
       opacity: 1;
     }
@@ -2678,16 +2733,16 @@
         white-space: nowrap;
       }
       body.mobile-detail-open #detail-action-row {
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         gap: 8px;
         max-width: 100%;
-        white-space: nowrap;
       }
       #detail-title {
         font-size: 21px;
         line-height: 1.5;
         margin-top: 14px;
       }
+      #detail-title-translation { font-size: 16px; }
       #detail-content {
         padding: 18px 18px 96px;
         font-size: 17px;
@@ -3073,12 +3128,20 @@
           <span id="detail-date"></span>
           <button id="detail-pin-badge" type="button" aria-pressed="false" data-tooltip="ピンを付ける" aria-label="ピンを付ける"><span class="pin-emoji"></span> ピン</button>
           <button id="detail-save-badge" type="button" aria-pressed="false" data-tooltip="Read It Laterに保存" aria-label="Read It Laterに保存">🔖 <span id="detail-save-label">保存</span></button>
+          <button id="detail-translate-btn" type="button" aria-pressed="false" data-tooltip="英語の記事を日本語に翻訳" aria-label="英語の記事を日本語に翻訳" hidden>🌐 日本語訳</button>
           <button id="detail-close-btn" data-tooltip="閉じる" data-tooltip-align="right" aria-label="閉じる">✕</button>
         </div>
       </div>
       <a id="detail-title" target="_blank" rel="noopener noreferrer"></a>
+      <div id="detail-title-translation" lang="ja" hidden></div>
     </div>
-    <div id="detail-content" style="display:none"></div>
+    <div id="detail-content" style="display:none">
+      <div id="detail-original-content"></div>
+      <section id="detail-translation" lang="ja" aria-labelledby="detail-translation-heading" aria-busy="false" hidden>
+        <h2 id="detail-translation-heading">日本語訳</h2>
+        <div id="detail-translation-body"></div>
+      </section>
+    </div>
     <div id="focus-nav">
       <button class="focus-nav-btn" id="focus-prev-btn" data-tooltip="前の記事" data-tooltip-pos="top" data-tooltip-align="right" aria-label="前の記事">↑</button>
       <button class="focus-nav-btn" id="focus-next-btn" data-tooltip="次の記事" data-tooltip-pos="top" data-tooltip-align="right" aria-label="次の記事">↓</button>
@@ -3109,7 +3172,7 @@
   <button id="theme-btn" data-tooltip="テーマ" data-tooltip-pos="top" data-tooltip-align="right" aria-label="ライト/ダークモード切替"></button>
 </div>
 
-<div id="status"></div>
+<div id="status" role="status" aria-live="polite"></div>
 <div id="mobile-pin-modal-overlay" aria-hidden="true">
   <div id="mobile-pin-modal" role="dialog" aria-modal="true" aria-labelledby="mobile-pin-modal-title">
     <div id="mobile-pin-modal-header">
@@ -3333,7 +3396,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-19.import-feed-merge';
+const APP_VERSION = '2026-07-20.browser-translation';
 const DEFAULT_PROFILE_ID = 'default';
 const CONFIG_HASH_PREFIX = '#rss-config=';
 const QR_LIB_URL = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1/qrcode.min.js';
@@ -3924,6 +3987,453 @@ async function loadStoredArticles() {
     return [];
   }
 }
+
+// ============================================================
+// Browser translation (English -> Japanese)
+// ============================================================
+const TRANSLATION_CACHE_KEY = 'translations-v1';
+const TRANSLATION_CACHE_VERSION = 1;
+const TRANSLATION_CACHE_LIMIT = 24;
+const TRANSLATION_SOURCE_LANGUAGE = 'en';
+const TRANSLATION_TARGET_LANGUAGE = 'ja';
+const TRANSLATION_FALLBACK_CHUNK_LENGTH = 3000;
+const TRANSLATION_SAFE_QUOTA_RATIO = 0.82;
+
+let browserTranslationAvailable = false;
+let translationCacheDbFailed = typeof indexedDB === 'undefined';
+let translationQuotaWarningShown = false;
+let activeTranslationOperation = null;
+let translationCacheWritePromise = Promise.resolve();
+const translationCache = new Map();
+let detailTranslationState = createEmptyDetailTranslationState();
+
+function createEmptyDetailTranslationState() {
+  return {
+    articleId: '',
+    fingerprint: '',
+    sourceTitle: '',
+    sourceBody: '',
+    record: null,
+    visible: false,
+    busy: false,
+    progress: '',
+  };
+}
+
+function hashTranslationValue(value) {
+  const text = String(value || '');
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function getArticleTranslationId(article) {
+  if (article?.link) return article.link;
+  const pubDate = article?.pubDate instanceof Date
+    ? article.pubDate.toISOString()
+    : String(article?.pubDate || '');
+  return `${article?.feedUrl || ''}\n${pubDate}\n${article?.title || ''}`;
+}
+
+function normalizeTranslationText(value) {
+  return String(value || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s*\n\s*/g, ' ')
+    .trim();
+}
+
+function extractTranslatableText(html) {
+  if (!html) return '';
+  const doc = new DOMParser().parseFromString(sanitizeHTML(html), 'text/html');
+  doc.querySelectorAll('img, picture, video, audio, svg, canvas, pre, code, noscript').forEach(el => el.remove());
+
+  const blockSelector = 'h1, h2, h3, h4, h5, h6, p, li, blockquote, figcaption, td, th, div';
+  const blocks = [...doc.body.querySelectorAll(blockSelector)]
+    .filter(el => !el.querySelector(blockSelector))
+    .map(el => normalizeTranslationText(el.textContent))
+    .filter(Boolean)
+    .filter((text, index, values) => index === 0 || text !== values[index - 1]);
+
+  if (blocks.length > 0) return blocks.join('\n\n');
+  return normalizeTranslationText(doc.body.textContent);
+}
+
+function buildDetailTranslationSource(article) {
+  const sourceTitle = normalizeTranslationText(article?.title);
+  const sourceBody = extractTranslatableText(article?.content);
+  return {
+    articleId: getArticleTranslationId(article),
+    sourceTitle,
+    sourceBody,
+    fingerprint: hashTranslationValue(`${sourceTitle}\n\u0000\n${sourceBody}`),
+  };
+}
+
+function isValidTranslationRecord(record) {
+  return record
+    && record.version === TRANSLATION_CACHE_VERSION
+    && typeof record.articleId === 'string'
+    && typeof record.fingerprint === 'string'
+    && typeof record.translatedTitle === 'string'
+    && typeof record.translatedBody === 'string'
+    && typeof record.translatedAt === 'string';
+}
+
+async function loadTranslationCache() {
+  if (translationCacheDbFailed) return;
+  try {
+    const stored = await idbGet(TRANSLATION_CACHE_KEY);
+    if (!Array.isArray(stored)) return;
+    stored.filter(isValidTranslationRecord).slice(-TRANSLATION_CACHE_LIMIT).forEach(record => {
+      translationCache.set(record.articleId, record);
+    });
+  } catch (err) {
+    translationCacheDbFailed = true;
+    console.warn('[RSS Translation] 翻訳キャッシュを読み込めないため、セッション内だけ保持します', err);
+  }
+}
+
+function persistTranslationCache() {
+  if (translationCacheDbFailed) return;
+  const records = [...translationCache.values()].slice(-TRANSLATION_CACHE_LIMIT);
+  const save = () => idbSet(TRANSLATION_CACHE_KEY, records);
+  translationCacheWritePromise = translationCacheWritePromise.then(save, save).catch(err => {
+    translationCacheDbFailed = true;
+    console.warn('[RSS Translation] 翻訳キャッシュを保存できないため、セッション内だけ保持します', err);
+  });
+}
+
+function rememberTranslationRecord(record) {
+  if (translationCache.has(record.articleId)) translationCache.delete(record.articleId);
+  translationCache.set(record.articleId, record);
+  while (translationCache.size > TRANSLATION_CACHE_LIMIT) {
+    const oldestKey = translationCache.keys().next().value;
+    translationCache.delete(oldestKey);
+  }
+  persistTranslationCache();
+}
+
+function isMobileBrowserForTranslation() {
+  if (navigator.userAgentData?.mobile === true) return true;
+  const userAgent = navigator.userAgent || '';
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent)
+    || (/Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1);
+}
+
+async function initBrowserTranslation() {
+  const TranslatorApi = globalThis.Translator;
+  const isTrustedOrigin = location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname);
+  if (!isTrustedOrigin || isMobileBrowserForTranslation() || typeof TranslatorApi?.availability !== 'function') {
+    browserTranslationAvailable = false;
+    renderDetailTranslationUi();
+    return;
+  }
+  try {
+    const availability = await TranslatorApi.availability({
+      sourceLanguage: TRANSLATION_SOURCE_LANGUAGE,
+      targetLanguage: TRANSLATION_TARGET_LANGUAGE,
+    });
+    browserTranslationAvailable = ['available', 'downloadable', 'downloading'].includes(availability);
+  } catch (err) {
+    browserTranslationAvailable = false;
+    console.warn('[RSS Translation] Translator APIの利用可否を確認できませんでした', err);
+  }
+  renderDetailTranslationUi();
+}
+
+function destroyTranslatorSafely(translator) {
+  if (!translator || typeof translator.destroy !== 'function') return;
+  try {
+    translator.destroy();
+  } catch (err) {
+    console.warn('[RSS Translation] Translatorの解放に失敗しました', err);
+  }
+}
+
+function cancelActiveTranslation() {
+  if (!activeTranslationOperation) return;
+  const operation = activeTranslationOperation;
+  activeTranslationOperation = null;
+  operation.controller.abort();
+  if (operation.translator) {
+    destroyTranslatorSafely(operation.translator);
+    operation.destroyed = true;
+  }
+}
+
+function resetDetailTranslation() {
+  cancelActiveTranslation();
+  detailTranslationState = createEmptyDetailTranslationState();
+  renderDetailTranslationUi();
+}
+
+function prepareDetailTranslation(article) {
+  const source = buildDetailTranslationSource(article);
+  if (detailTranslationState.articleId === source.articleId
+      && detailTranslationState.fingerprint === source.fingerprint) {
+    renderDetailTranslationUi();
+    return;
+  }
+
+  cancelActiveTranslation();
+  let record = translationCache.get(source.articleId) || null;
+  if (record && record.fingerprint !== source.fingerprint) {
+    translationCache.delete(source.articleId);
+    persistTranslationCache();
+    record = null;
+  }
+  detailTranslationState = {
+    ...createEmptyDetailTranslationState(),
+    ...source,
+    record,
+  };
+  renderDetailTranslationUi();
+}
+
+function renderDetailTranslationUi() {
+  const button = document.getElementById('detail-translate-btn');
+  const title = document.getElementById('detail-title-translation');
+  const section = document.getElementById('detail-translation');
+  const body = document.getElementById('detail-translation-body');
+  if (!button || !title || !section || !body) return;
+
+  const hasArticle = !!detailTranslationState.articleId;
+  button.hidden = !browserTranslationAvailable || !hasArticle;
+  button.disabled = detailTranslationState.busy;
+  button.setAttribute('aria-pressed', detailTranslationState.visible ? 'true' : 'false');
+
+  if (detailTranslationState.busy) {
+    button.textContent = `🌐 ${detailTranslationState.progress || '翻訳中'}`;
+    setButtonHelp(button, detailTranslationState.progress || '日本語に翻訳中');
+  } else if (detailTranslationState.record) {
+    const action = detailTranslationState.visible ? '訳文を隠す' : '訳文を表示';
+    button.textContent = `🌐 ${action}`;
+    setButtonHelp(button, action);
+  } else {
+    button.textContent = '🌐 日本語訳';
+    setButtonHelp(button, '英語の記事を日本語に翻訳');
+  }
+
+  const record = detailTranslationState.record;
+  const showTitle = Boolean(detailTranslationState.visible && record?.translatedTitle);
+  const showBody = Boolean(detailTranslationState.visible && record?.translatedBody);
+  title.textContent = showTitle ? record.translatedTitle : '';
+  title.hidden = !showTitle;
+  body.textContent = showBody ? record.translatedBody : '';
+  section.hidden = !showBody;
+  section.setAttribute('aria-busy', detailTranslationState.busy ? 'true' : 'false');
+}
+
+async function fitsTranslationQuota(text, translator) {
+  if (!text) return true;
+  const quota = Number(translator.inputQuota);
+  if (quota === Infinity) return true;
+  if (typeof translator.measureInputUsage !== 'function' || !Number.isFinite(quota) || quota <= 0) {
+    return text.length <= TRANSLATION_FALLBACK_CHUNK_LENGTH;
+  }
+  try {
+    const usage = await translator.measureInputUsage(text);
+    return Number(usage) <= quota * TRANSLATION_SAFE_QUOTA_RATIO;
+  } catch (err) {
+    if (err?.name === 'AbortError') throw err;
+    if (!translationQuotaWarningShown) {
+      translationQuotaWarningShown = true;
+      console.warn('[RSS Translation] 入力使用量を計測できないため、文字数で本文を分割します', err);
+    }
+    return text.length <= TRANSLATION_FALLBACK_CHUNK_LENGTH;
+  }
+}
+
+function findTranslationSplitPoint(text) {
+  const middle = Math.floor(text.length / 2);
+  const before = text.lastIndexOf(' ', middle);
+  const after = text.indexOf(' ', middle);
+  if (before >= Math.floor(middle * 0.6)) return before;
+  if (after > middle && after <= Math.floor(text.length * 0.8)) return after;
+  return middle;
+}
+
+async function splitOversizedTranslationText(text, translator, signal) {
+  if (signal.aborted) throw new DOMException('翻訳を中止しました', 'AbortError');
+  if (await fitsTranslationQuota(text, translator)) return [text];
+  if (text.length <= 1) throw new DOMException('翻訳できる入力上限を超えています', 'QuotaExceededError');
+
+  const splitAt = findTranslationSplitPoint(text);
+  const left = text.slice(0, splitAt).trim();
+  const right = text.slice(splitAt).trim();
+  if (!left || !right) throw new DOMException('翻訳できる入力上限を超えています', 'QuotaExceededError');
+  const leftChunks = await splitOversizedTranslationText(left, translator, signal);
+  const rightChunks = await splitOversizedTranslationText(right, translator, signal);
+  return [...leftChunks, ...rightChunks];
+}
+
+async function splitTextForTranslation(text, translator, signal) {
+  if (!text) return [];
+  const paragraphs = text.split(/\n{2,}/).map(item => item.trim()).filter(Boolean);
+  const pieces = [];
+  for (const paragraph of paragraphs) {
+    pieces.push(...await splitOversizedTranslationText(paragraph, translator, signal));
+  }
+
+  const chunks = [];
+  let current = '';
+  for (const piece of pieces) {
+    const candidate = current ? `${current}\n\n${piece}` : piece;
+    if (await fitsTranslationQuota(candidate, translator)) {
+      current = candidate;
+      continue;
+    }
+    if (current) chunks.push(current);
+    current = piece;
+  }
+  if (current) chunks.push(current);
+  return chunks;
+}
+
+function updateTranslationProgress(operation, label, statusMessage = '') {
+  if (activeTranslationOperation !== operation
+      || detailTranslationState.articleId !== operation.articleId) return;
+  detailTranslationState.progress = label;
+  renderDetailTranslationUi();
+  if (statusMessage) showStatus(statusMessage, 10000);
+}
+
+function formatBrowserTranslationError(err) {
+  switch (err?.name) {
+    case 'NetworkError':
+      return '翻訳用言語データを取得できません。ネット接続を確認して再実行してください。';
+    case 'NotAllowedError':
+      return 'ブラウザで翻訳用言語データの利用が許可されませんでした。';
+    case 'NotSupportedError':
+      return 'このブラウザでは英語から日本語への翻訳に対応していません。';
+    case 'QuotaExceededError':
+      return '本文が翻訳可能な入力上限を超えています。';
+    case 'InvalidStateError':
+      return 'ページが非アクティブなため翻訳できません。ページを表示して再実行してください。';
+    default:
+      return `翻訳に失敗しました: ${err?.message || '原因不明'}`;
+  }
+}
+
+async function runBrowserTranslation(operation, translatorPromise) {
+  let translator = null;
+  try {
+    translator = await translatorPromise;
+    operation.translator = translator;
+    if (operation.controller.signal.aborted) throw new DOMException('翻訳を中止しました', 'AbortError');
+
+    updateTranslationProgress(operation, '準備中', '翻訳する本文を準備しています...');
+    const titleChunks = await splitTextForTranslation(operation.sourceTitle, translator, operation.controller.signal);
+    const bodyChunks = await splitTextForTranslation(operation.sourceBody, translator, operation.controller.signal);
+    const total = titleChunks.length + bodyChunks.length;
+    let completed = 0;
+
+    const translateChunks = async (chunks, separator) => {
+      const translated = [];
+      for (const chunk of chunks) {
+        updateTranslationProgress(operation, `翻訳中 ${completed + 1}/${total}`);
+        translated.push((await translator.translate(chunk, { signal: operation.controller.signal })).trim());
+        completed++;
+      }
+      return translated.filter(Boolean).join(separator);
+    };
+
+    const translatedTitle = await translateChunks(titleChunks, ' ');
+    const translatedBody = await translateChunks(bodyChunks, '\n\n');
+    const record = {
+      version: TRANSLATION_CACHE_VERSION,
+      articleId: operation.articleId,
+      fingerprint: operation.fingerprint,
+      translatedTitle,
+      translatedBody,
+      translatedAt: new Date().toISOString(),
+    };
+    rememberTranslationRecord(record);
+
+    if (activeTranslationOperation === operation
+        && detailTranslationState.articleId === operation.articleId
+        && detailTranslationState.fingerprint === operation.fingerprint) {
+      detailTranslationState.record = record;
+      detailTranslationState.visible = true;
+      detailTranslationState.busy = false;
+      detailTranslationState.progress = '';
+      renderDetailTranslationUi();
+      showStatus('日本語訳を表示しました', 4000);
+    }
+  } catch (err) {
+    if (err?.name !== 'AbortError') console.error('[RSS Translation] 翻訳失敗', err);
+    if (activeTranslationOperation === operation
+        && detailTranslationState.articleId === operation.articleId) {
+      detailTranslationState.busy = false;
+      detailTranslationState.progress = '';
+      renderDetailTranslationUi();
+      if (err?.name !== 'AbortError') showStatus(formatBrowserTranslationError(err), 7000);
+    }
+  } finally {
+    if (!operation.destroyed) destroyTranslatorSafely(translator);
+    if (activeTranslationOperation === operation) activeTranslationOperation = null;
+  }
+}
+
+function handleDetailTranslationClick() {
+  if (!browserTranslationAvailable || !detailTranslationState.articleId || detailTranslationState.busy) return;
+  if (detailTranslationState.record) {
+    detailTranslationState.visible = !detailTranslationState.visible;
+    renderDetailTranslationUi();
+    return;
+  }
+  if (!detailTranslationState.sourceTitle && !detailTranslationState.sourceBody) {
+    showStatus('翻訳できるタイトルまたは本文がありません', 4000);
+    return;
+  }
+
+  const TranslatorApi = globalThis.Translator;
+  const controller = new AbortController();
+  const operation = {
+    articleId: detailTranslationState.articleId,
+    fingerprint: detailTranslationState.fingerprint,
+    sourceTitle: detailTranslationState.sourceTitle,
+    sourceBody: detailTranslationState.sourceBody,
+    controller,
+    translator: null,
+    destroyed: false,
+  };
+  activeTranslationOperation = operation;
+  detailTranslationState.busy = true;
+  detailTranslationState.progress = '準備中';
+  renderDetailTranslationUi();
+
+  let translatorPromise;
+  try {
+    // 言語パックの初回ダウンロードに必要なユーザー操作を保つため、click内で直ちにcreateする。
+    translatorPromise = TranslatorApi.create({
+      sourceLanguage: TRANSLATION_SOURCE_LANGUAGE,
+      targetLanguage: TRANSLATION_TARGET_LANGUAGE,
+      signal: controller.signal,
+      monitor(monitor) {
+        monitor.addEventListener('downloadprogress', event => {
+          const percent = Math.max(0, Math.min(100, Math.round(Number(event.loaded || 0) * 100)));
+          updateTranslationProgress(operation, `準備 ${percent}%`, `翻訳用言語データを準備中... ${percent}%`);
+        });
+      },
+    });
+  } catch (err) {
+    activeTranslationOperation = null;
+    detailTranslationState.busy = false;
+    detailTranslationState.progress = '';
+    renderDetailTranslationUi();
+    showStatus(formatBrowserTranslationError(err), 7000);
+    return;
+  }
+  runBrowserTranslation(operation, translatorPromise).catch(err => {
+    console.error('[RSS Translation] 予期しない翻訳エラー', err);
+  });
+}
+
 let filteredArticles = [];
 let selectedFeedUrl = null; // null = すべて / 'READ_LATER' / 'FOLDER:名前' / フィードURL
 let prevFeedUrlBeforeReadLater = null;
@@ -5446,9 +5956,11 @@ function showDetail(index) {
   const endState   = document.getElementById('end-state');
   const header = document.getElementById('detail-header');
   const content = document.getElementById('detail-content');
+  const originalContent = document.getElementById('detail-original-content');
   const detailPanel = document.getElementById('detail-panel');
 
   if (index < 0) {
+    resetDetailTranslation();
     document.body.classList.remove('mobile-detail-open');
     emptyState.style.display = 'flex';
     endState.style.display = 'none';
@@ -5460,6 +5972,7 @@ function showDetail(index) {
   }
 
   if (index >= filteredArticles.length) {
+    resetDetailTranslation();
     document.body.classList.add('mobile-detail-open');
     endState.style.display = 'flex';
     emptyState.style.display = 'none';
@@ -5516,9 +6029,9 @@ function showDetail(index) {
   }
 
   if (sanitized) {
-    content.innerHTML = sanitized;
+    originalContent.innerHTML = sanitized;
   } else {
-    content.textContent = '';
+    originalContent.replaceChildren();
     const p = document.createElement('p');
     p.style.color = '#555';
     p.append('コンテンツがありません。');
@@ -5532,8 +6045,10 @@ function showDetail(index) {
       p.append(' ');
       p.appendChild(a);
     }
-    content.appendChild(p);
+    originalContent.appendChild(p);
   }
+
+  prepareDetailTranslation(article);
 
   // Scroll content to top
   content.scrollTop = 0;
@@ -6283,6 +6798,8 @@ document.getElementById('settings-theme-toggle-btn').addEventListener('click', t
 
 document.getElementById('detail-pin-badge').addEventListener('click', () => togglePin(currentIndex));
 document.getElementById('detail-save-badge').addEventListener('click', () => toggleSave(currentIndex));
+document.getElementById('detail-translate-btn').addEventListener('click', handleDetailTranslationClick);
+window.addEventListener('pagehide', cancelActiveTranslation);
 document.getElementById('pin-open-btn').addEventListener('click', openPinned);
 document.getElementById('pin-clear-btn').addEventListener('click', clearPins);
 document.getElementById('mobile-pin-toggle').addEventListener('click', openPinned);
@@ -6343,6 +6860,9 @@ window.addEventListener('resize', restoreMobileDetailNavPosition);
 // ============================================================
 (async function init() {
   updateThemeControls();
+  initBrowserTranslation().catch(err => {
+    console.warn('[RSS Translation] Translator APIの初期化に失敗しました', err);
+  });
   // 引き継ぎリンク（#rss-config=...）で開かれた場合は Cloud 設定を取り込む
   applyConfigFromHash();
   if (localStorage.getItem('rss-viewmode') === 'tile') {
@@ -6357,6 +6877,7 @@ window.addEventListener('resize', restoreMobileDetailNavPosition);
   }
 
   // 記事キャッシュを IndexedDB（なければ localStorage）から読み込む
+  await loadTranslationCache();
   allArticles = await loadStoredArticles();
 
   // オフライン対応の Service Worker（http/https のみ。file:// では登録しない）
