@@ -3396,10 +3396,16 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-20.feed-date-fix';
+const APP_VERSION = '2026-07-21.merge-tombstones';
 const DEFAULT_PROFILE_ID = 'default';
 const CONFIG_HASH_PREFIX = '#rss-config=';
 const QR_LIB_URL = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1/qrcode.min.js';
+const CLOUD_BATCH_SIZE = 50;
+const TOMBSTONE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const DELETED_FEEDS_STORAGE_KEY = 'rss-deleted-feeds';
+const PIN_VERSIONS_STORAGE_KEY = 'rss-pin-versions';
+const DELETED_PINS_STORAGE_KEY = 'rss-deleted-pins';
+const DELETED_SAVED_STORAGE_KEY = 'rss-deleted-saved';
 let cloudConfig = (() => {
   try {
     const parsed = JSON.parse(localStorage.getItem(CLOUD_STORAGE_KEY) || '{}');
@@ -3417,6 +3423,7 @@ let cloudConfig = (() => {
 let cloudEnabled = false;
 let cloudSyncTimer = null;
 let cloudSyncPromise = Promise.resolve();
+let lastCloudSyncAt = 0;
 
 function hasCloudConfig() {
   return !!(cloudConfig.url && cloudConfig.anonKey && cloudConfig.profileId);
@@ -3552,7 +3559,102 @@ async function copyConfigTransferUrl() {
   }
 }
 
+function normalizeSyncDate(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function syncDateToIso(value) {
+  return normalizeSyncDate(value)?.toISOString() || null;
+}
+
+function getFeedVersion(feed) {
+  return normalizeSyncDate(feed?.updatedAt)?.getTime() || 0;
+}
+
+function getSavedVersion(article) {
+  return normalizeSyncDate(article?.updatedAt)?.getTime()
+    || normalizeSyncDate(article?.savedAt)?.getTime()
+    || 0;
+}
+
+function getTombstoneVersion(tombstone) {
+  return normalizeSyncDate(tombstone?.deletedAt)?.getTime() || 0;
+}
+
+function loadSyncTombstones(storageKey) {
+  let raw = [];
+  try { raw = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch {}
+  const byUrl = new Map();
+  (Array.isArray(raw) ? raw : []).forEach(item => {
+    const url = normalizeHttpUrl(item?.url);
+    const deletedAt = normalizeSyncDate(item?.deletedAt);
+    if (!url || !deletedAt) return;
+    const current = byUrl.get(url);
+    if (!current || deletedAt > current.deletedAt) byUrl.set(url, { url, deletedAt });
+  });
+  return [...byUrl.values()];
+}
+
+function saveSyncTombstones(storageKey, tombstones) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(tombstones));
+  } catch (err) {
+    console.warn(`[RSS Cloud] 削除記録を保存できませんでした: ${storageKey}`, err);
+  }
+}
+
+function serializeFeedForCloud(feed, index) {
+  const updatedAt = syncDateToIso(feed.updatedAt) || new Date().toISOString();
+  const row = {
+    profile_id: cloudConfig.profileId,
+    url: feed.url,
+    title: feed.title || '',
+    color: isSafeColor(feed.color) ? feed.color : COLORS[index % COLORS.length],
+    updated_at: updatedAt,
+    deleted_at: null,
+  };
+  if (!cloudFolderColumnMissing) row.folder = getFeedFolder(feed);
+  return row;
+}
+
+function serializeFeedTombstoneForCloud(tombstone) {
+  const deletedAt = syncDateToIso(tombstone.deletedAt) || new Date().toISOString();
+  const row = {
+    profile_id: cloudConfig.profileId,
+    url: tombstone.url,
+    title: '',
+    color: '#5b9bd5',
+    updated_at: deletedAt,
+    deleted_at: deletedAt,
+  };
+  if (!cloudFolderColumnMissing) row.folder = '';
+  return row;
+}
+
+function serializePinForCloud(url) {
+  const updatedAt = new Date(getPinVersion(url) || Date.now()).toISOString();
+  return {
+    profile_id: cloudConfig.profileId,
+    link: url,
+    updated_at: updatedAt,
+    deleted_at: null,
+  };
+}
+
+function serializePinTombstoneForCloud(tombstone) {
+  const deletedAt = syncDateToIso(tombstone.deletedAt) || new Date().toISOString();
+  return {
+    profile_id: cloudConfig.profileId,
+    link: tombstone.url,
+    updated_at: deletedAt,
+    deleted_at: deletedAt,
+  };
+}
+
 function serializeArticleForCloud(article) {
+  const savedAt = syncDateToIso(article.savedAt) || new Date().toISOString();
   return {
     profile_id: cloudConfig.profileId,
     link: article.link || '',
@@ -3561,19 +3663,52 @@ function serializeArticleForCloud(article) {
     pub_date: serializeArticleDate(article.pubDate),
     image: article.image || null,
     content: article.content || '',
-    saved_at: article.savedAt instanceof Date ? article.savedAt.toISOString() : (article.savedAt || new Date()).toISOString(),
+    saved_at: savedAt,
+    updated_at: syncDateToIso(article.updatedAt) || savedAt,
+    deleted_at: null,
+  };
+}
+
+function serializeSavedTombstoneForCloud(tombstone) {
+  const deletedAt = syncDateToIso(tombstone.deletedAt) || new Date().toISOString();
+  return {
+    profile_id: cloudConfig.profileId,
+    link: tombstone.url,
+    title: '',
+    feed_url: null,
+    pub_date: null,
+    image: null,
+    content: '',
+    saved_at: deletedAt,
+    updated_at: deletedAt,
+    deleted_at: deletedAt,
+  };
+}
+
+function cloudFeedToLocal(row, index) {
+  const url = normalizeHttpUrl(row?.url);
+  if (!url) return null;
+  return {
+    url,
+    title: typeof row.title === 'string' ? row.title : '',
+    color: isSafeColor(row.color) ? row.color : COLORS[index % COLORS.length],
+    folder: normalizeFolderName(row.folder),
+    updatedAt: normalizeSyncDate(row.updated_at),
   };
 }
 
 function cloudArticleToLocal(row) {
+  const link = normalizeHttpUrl(row?.link);
+  if (!link) return null;
   return {
-    title: row.title || row.link || '(タイトルなし)',
-    link: row.link || '',
-    feedUrl: row.feed_url || '',
+    title: row.title || link || '(タイトルなし)',
+    link,
+    feedUrl: normalizeHttpUrl(row.feed_url),
     pubDate: normalizeArticleDate(row.pub_date),
-    image: row.image || '',
-    content: row.content || '',
-    savedAt: row.saved_at ? new Date(row.saved_at) : new Date(),
+    image: normalizeHttpUrl(row.image),
+    content: typeof row.content === 'string' ? row.content : '',
+    savedAt: normalizeSyncDate(row.saved_at) || new Date(),
+    updatedAt: normalizeSyncDate(row.updated_at) || normalizeSyncDate(row.saved_at),
   };
 }
 
@@ -3581,9 +3716,9 @@ function queueCloudSync(reason = 'change') {
   if (!cloudEnabled) return;
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = setTimeout(() => {
-    pushCloudState(reason).catch(err => {
+    syncCloudState(reason).catch(err => {
       console.error('[RSS Cloud] sync failed', err);
-      showStatus(`同期失敗: ${err.message}`, 5000);
+      showStatus(`同期失敗: ${err.message}`, 9000);
       updateCloudStatus();
     });
   }, 700);
@@ -3601,58 +3736,202 @@ function isFolderColumnError(err) {
   return /folder/i.test(String(err?.message || ''));
 }
 
-async function pushCloudState(reason = 'change') {
-  if (!cloudEnabled) return null;
-  clearTimeout(cloudSyncTimer);
-  const runSync = async () => {
-    const buildFeedRows = includeFolder => feeds.map((feed, index) => {
-      const row = {
-        profile_id: cloudConfig.profileId,
-        url: feed.url,
-        title: feed.title || '',
-        color: isSafeColor(feed.color) ? feed.color : COLORS[index % COLORS.length],
-        updated_at: new Date().toISOString(),
-      };
-      if (includeFolder) row.folder = getFeedFolder(feed);
-      return row;
-    });
-    const feedRows = buildFeedRows(!cloudFolderColumnMissing);
-    const pinRows = [...pinnedUrls].filter(Boolean).map(url => ({ profile_id: cloudConfig.profileId, link: url }));
-    const savedRows = savedArticles.filter(article => article.link).map(serializeArticleForCloud);
+function isMergeSchemaError(err) {
+  const message = String(err?.message || '');
+  return /deleted_at/i.test(message) || (/updated_at/i.test(message) && /rss_pins|rss_saved_articles/i.test(message));
+}
 
-    try {
-      await syncCloudTable('rss_feeds', feedRows, 'url', ['profile_id', 'url']);
-    } catch (err) {
-      if (cloudFolderColumnMissing || !isFolderColumnError(err)) throw err;
-      cloudFolderColumnMissing = true;
-      notifyCloudFolderColumnMissing();
-      await syncCloudTable('rss_feeds', buildFeedRows(false), 'url', ['profile_id', 'url']);
+function chooseSyncWinner(candidates) {
+  return candidates.filter(Boolean).reduce((winner, candidate) => {
+    if (!winner || candidate.version > winner.version) return candidate;
+    if (candidate.version < winner.version) return winner;
+    if (candidate.kind === 'deleted' && winner.kind !== 'deleted') return candidate;
+    if (candidate.kind === winner.kind && candidate.source === 'cloud') return candidate;
+    return winner;
+  }, null);
+}
+
+function cloudRowState(row, keyColumn, toLocal, index = 0) {
+  const key = normalizeHttpUrl(row?.[keyColumn]);
+  if (!key) return null;
+  const deletedAt = normalizeSyncDate(row.deleted_at);
+  if (deletedAt) {
+    return { key, kind: 'deleted', source: 'cloud', version: deletedAt.getTime(), value: { url: key, deletedAt } };
+  }
+  const value = toLocal(row, index);
+  if (!value) return null;
+  const updatedAt = normalizeSyncDate(row.updated_at)
+    || normalizeSyncDate(row.saved_at)
+    || normalizeSyncDate(row.created_at);
+  return { key, kind: 'live', source: 'cloud', version: updatedAt?.getTime() || 0, value };
+}
+
+function mergeCloudFeeds(rows) {
+  const localLive = new Map(feeds.filter(feed => feed?.url).map(feed => [feed.url, feed]));
+  const localDeleted = new Map(deletedFeeds.map(item => [item.url, item]));
+  const cloud = new Map();
+  rows.forEach((row, index) => {
+    const state = cloudRowState(row, 'url', cloudFeedToLocal, index);
+    if (state) cloud.set(state.key, state);
+  });
+  const keys = new Set([...localLive.keys(), ...localDeleted.keys(), ...cloud.keys()]);
+  const nextFeeds = [];
+  const nextDeleted = [];
+  keys.forEach(url => {
+    const feed = localLive.get(url);
+    const tombstone = localDeleted.get(url);
+    const winner = chooseSyncWinner([
+      feed && { kind: 'live', source: 'local', version: getFeedVersion(feed), value: feed },
+      tombstone && { kind: 'deleted', source: 'local', version: getTombstoneVersion(tombstone), value: tombstone },
+      cloud.get(url),
+    ]);
+    if (winner?.kind === 'live') nextFeeds.push(winner.value);
+    if (winner?.kind === 'deleted') nextDeleted.push(winner.value);
+  });
+  feeds = nextFeeds;
+  deletedFeeds = nextDeleted;
+  return cloud;
+}
+
+function mergeCloudPins(rows) {
+  const localDeleted = new Map(deletedPins.map(item => [item.url, item]));
+  const cloud = new Map();
+  rows.forEach((row, index) => {
+    const state = cloudRowState(row, 'link', cloudRow => normalizeHttpUrl(cloudRow.link), index);
+    if (state) cloud.set(state.key, state);
+  });
+  const keys = new Set([...pinnedUrls, ...localDeleted.keys(), ...cloud.keys()]);
+  const nextPins = new Set();
+  const nextVersions = new Map();
+  const nextDeleted = [];
+  keys.forEach(url => {
+    const tombstone = localDeleted.get(url);
+    const winner = chooseSyncWinner([
+      pinnedUrls.has(url) && { kind: 'live', source: 'local', version: getPinVersion(url), value: url },
+      tombstone && { kind: 'deleted', source: 'local', version: getTombstoneVersion(tombstone), value: tombstone },
+      cloud.get(url),
+    ]);
+    if (winner?.kind === 'live') {
+      nextPins.add(url);
+      nextVersions.set(url, winner.version);
     }
-    await syncCloudTable('rss_pins', pinRows, 'link', ['profile_id', 'link']);
-    await syncCloudTable('rss_saved_articles', savedRows, 'link', ['profile_id', 'link']);
+    if (winner?.kind === 'deleted') nextDeleted.push(winner.value);
+  });
+  pinnedUrls = nextPins;
+  pinUpdatedAt = nextVersions;
+  deletedPins = nextDeleted;
+  return cloud;
+}
 
-    const counts = await verifyCloudCounts({
-      feeds: feedRows.length,
-      pins: pinRows.length,
-      saved: savedRows.length,
-    });
-    updateCloudStatus('online');
-    if (reason === 'manual') showStatus(`同期しました（フィード${counts.feeds}件 / ピン${counts.pins}件 / 保存${counts.saved}件）`, 5000);
-    return counts;
+function mergeCloudSaved(rows) {
+  const localLive = new Map(savedArticles.filter(article => article?.link).map(article => [article.link, article]));
+  const localDeleted = new Map(deletedSavedArticles.map(item => [item.url, item]));
+  const cloud = new Map();
+  rows.forEach((row, index) => {
+    const state = cloudRowState(row, 'link', cloudArticleToLocal, index);
+    if (state) cloud.set(state.key, state);
+  });
+  const keys = new Set([...localLive.keys(), ...localDeleted.keys(), ...cloud.keys()]);
+  const nextSaved = [];
+  const nextDeleted = [];
+  keys.forEach(link => {
+    const article = localLive.get(link);
+    const tombstone = localDeleted.get(link);
+    const winner = chooseSyncWinner([
+      article && { kind: 'live', source: 'local', version: getSavedVersion(article), value: article },
+      tombstone && { kind: 'deleted', source: 'local', version: getTombstoneVersion(tombstone), value: tombstone },
+      cloud.get(link),
+    ]);
+    if (winner?.kind === 'live') nextSaved.push(winner.value);
+    if (winner?.kind === 'deleted') nextDeleted.push(winner.value);
+  });
+  nextSaved.sort((a, b) => (normalizeSyncDate(b.savedAt)?.getTime() || 0) - (normalizeSyncDate(a.savedAt)?.getTime() || 0));
+  savedArticles = nextSaved;
+  deletedSavedArticles = nextDeleted;
+  syncSavedUrls();
+  return cloud;
+}
+
+function ensureLocalSyncVersions() {
+  const now = new Date();
+  feeds.forEach(feed => {
+    if (!getFeedVersion(feed)) feed.updatedAt = now;
+  });
+  pinnedUrls.forEach(url => {
+    if (!getPinVersion(url)) pinUpdatedAt.set(url, now.getTime());
+  });
+  savedArticles.forEach(article => {
+    if (!getSavedVersion(article)) article.updatedAt = now;
+  });
+}
+
+function pruneExpiredLocalTombstones() {
+  const cutoff = Date.now() - TOMBSTONE_RETENTION_MS;
+  const result = {
+    feeds: deletedFeeds.some(item => getTombstoneVersion(item) <= cutoff),
+    pins: deletedPins.some(item => getTombstoneVersion(item) <= cutoff),
+    saved: deletedSavedArticles.some(item => getTombstoneVersion(item) <= cutoff),
   };
-  cloudSyncPromise = cloudSyncPromise.then(runSync, runSync);
-  return cloudSyncPromise;
+  deletedFeeds = deletedFeeds.filter(item => getTombstoneVersion(item) > cutoff);
+  deletedPins = deletedPins.filter(item => getTombstoneVersion(item) > cutoff);
+  deletedSavedArticles = deletedSavedArticles.filter(item => getTombstoneVersion(item) > cutoff);
+  return result;
 }
 
-function hasLocalFeeds() {
-  return feeds.length > 0;
+function shouldPushState(localKind, localVersion, cloudState) {
+  if (!cloudState) return true;
+  if (localVersion > cloudState.version) return true;
+  return localVersion === cloudState.version && localKind === 'deleted' && cloudState.kind !== 'deleted';
 }
 
-function formatCloudError(tableName, error) {
-  const code = error?.code ? ` (${error.code})` : '';
-  const message = error?.message || '原因不明';
-  const hint = error?.hint ? ` / ${error.hint}` : '';
-  return `${tableName}: ${message}${code}${hint}`;
+function collectDirtyRows(cloudFeeds, cloudPins, cloudSaved) {
+  const feedRows = [];
+  feeds.forEach((feed, index) => {
+    if (shouldPushState('live', getFeedVersion(feed), cloudFeeds.get(feed.url))) feedRows.push(serializeFeedForCloud(feed, index));
+  });
+  deletedFeeds.forEach(item => {
+    if (shouldPushState('deleted', getTombstoneVersion(item), cloudFeeds.get(item.url))) feedRows.push(serializeFeedTombstoneForCloud(item));
+  });
+
+  const pinRows = [];
+  pinnedUrls.forEach(url => {
+    if (shouldPushState('live', getPinVersion(url), cloudPins.get(url))) pinRows.push(serializePinForCloud(url));
+  });
+  deletedPins.forEach(item => {
+    if (shouldPushState('deleted', getTombstoneVersion(item), cloudPins.get(item.url))) pinRows.push(serializePinTombstoneForCloud(item));
+  });
+
+  const savedRows = [];
+  savedArticles.forEach(article => {
+    if (shouldPushState('live', getSavedVersion(article), cloudSaved.get(article.link))) savedRows.push(serializeArticleForCloud(article));
+  });
+  deletedSavedArticles.forEach(item => {
+    if (shouldPushState('deleted', getTombstoneVersion(item), cloudSaved.get(item.url))) savedRows.push(serializeSavedTombstoneForCloud(item));
+  });
+  return { feedRows, pinRows, savedRows };
+}
+
+function refreshAfterCloudMerge() {
+  const liveFeedUrls = new Set(feeds.map(feed => feed.url));
+  const articleCount = allArticles.length;
+  allArticles = allArticles.filter(article => liveFeedUrls.has(article.feedUrl));
+  if (allArticles.length !== articleCount) saveArticles();
+  let proxyCacheChanged = false;
+  Object.keys(proxyCache).forEach(url => {
+    if (!liveFeedUrls.has(url)) {
+      delete proxyCache[url];
+      proxyCacheChanged = true;
+    }
+  });
+  if (proxyCacheChanged) saveProxyCache();
+  saveFeedHealth();
+  if (selectedFeedUrl && selectedFeedUrl !== 'READ_LATER' && !isFolderSelection(selectedFeedUrl)) {
+    if (!feeds.some(feed => feed.url === selectedFeedUrl)) selectedFeedUrl = null;
+  }
+  updatePinBar();
+  updateReadLaterBtn();
+  renderFeedSelect();
+  applyFilter();
 }
 
 function getCloudRestBase() {
@@ -3673,18 +3952,18 @@ async function cloudFetch(tableName, url, options = {}) {
     resp = await fetch(url, {
       ...options,
       headers: getCloudHeaders(options.headers || {}),
+      signal: options.signal || AbortSignal.timeout(15000),
     });
   } catch (err) {
     throw new Error(`${tableName}: fetch失敗: ${err.message || err}`);
   }
   if (!resp.ok) {
-    let detail = '';
+    const bodyText = await resp.text();
+    let detail = bodyText;
     try {
-      const body = await resp.json();
+      const body = bodyText ? JSON.parse(bodyText) : null;
       detail = body.message || body.hint || JSON.stringify(body);
-    } catch {
-      detail = await resp.text();
-    }
+    } catch {}
     throw new Error(`${tableName}: HTTP ${resp.status}${detail ? ` / ${detail}` : ''}`);
   }
   return resp;
@@ -3709,140 +3988,137 @@ function buildCloudSelectUrl(tableName, selectColumns, orderColumn = '') {
   return `${getCloudRestBase()}/${tableName}?${params.toString()}`;
 }
 
-function buildCloudFilteredUrl(tableName, filters) {
-  const params = new URLSearchParams();
-  Object.entries(filters).forEach(([column, value]) => {
-    params.set(column, `eq.${value}`);
-  });
-  return `${getCloudRestBase()}/${tableName}?${params.toString()}`;
+async function upsertCloudRows(tableName, rows, conflictColumns) {
+  if (rows.length === 0) return;
+  for (let i = 0; i < rows.length; i += CLOUD_BATCH_SIZE) {
+    const params = new URLSearchParams();
+    params.set('on_conflict', conflictColumns.join(','));
+    await cloudFetch(tableName, `${getCloudRestBase()}/${tableName}?${params.toString()}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify(rows.slice(i, i + CLOUD_BATCH_SIZE)),
+    });
+  }
 }
 
-async function deleteCloudRows(tableName, filters) {
-  await cloudFetch(tableName, buildCloudFilteredUrl(tableName, filters), {
+async function deleteExpiredCloudTombstones(tableName) {
+  const cutoff = new Date(Date.now() - TOMBSTONE_RETENTION_MS).toISOString();
+  const params = new URLSearchParams();
+  params.set('profile_id', `eq.${cloudConfig.profileId}`);
+  params.set('deleted_at', `lt.${cutoff}`);
+  await cloudFetch(tableName, `${getCloudRestBase()}/${tableName}?${params.toString()}`, {
     method: 'DELETE',
     headers: { Prefer: 'return=minimal' },
   });
 }
 
-async function upsertCloudRows(tableName, rows, conflictColumns) {
-  if (rows.length === 0) return;
-  const params = new URLSearchParams();
-  params.set('on_conflict', conflictColumns.join(','));
-  await cloudFetch(tableName, `${getCloudRestBase()}/${tableName}?${params.toString()}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates,return=minimal',
-    },
-    body: JSON.stringify(rows),
-  });
-}
-
-async function syncCloudTable(tableName, rows, keyColumn, conflictColumns) {
-  await upsertCloudRows(tableName, rows, conflictColumns);
-  if (rows.length === 0) {
-    await deleteCloudRows(tableName, { profile_id: cloudConfig.profileId });
-    return;
-  }
-
-  const currentKeys = new Set(rows.map(row => String(row[keyColumn] || '')).filter(Boolean));
-  const existingRows = await runCloudSelect(tableName, buildCloudSelectUrl(tableName, keyColumn));
-  const staleKeys = existingRows
-    .map(row => String(row[keyColumn] || ''))
-    .filter(key => key && !currentKeys.has(key));
-
-  // in.(...) でまとめて削除（URL長対策で50件ずつ）
-  const CHUNK = 50;
-  for (let i = 0; i < staleKeys.length; i += CHUNK) {
-    const chunk = staleKeys.slice(i, i + CHUNK);
-    const params = new URLSearchParams();
-    params.set('profile_id', `eq.${cloudConfig.profileId}`);
-    params.set(keyColumn, `in.(${chunk.map(key => `"${key.replace(/"/g, '\\"')}"`).join(',')})`);
-    await cloudFetch(tableName, `${getCloudRestBase()}/${tableName}?${params.toString()}`, {
-      method: 'DELETE',
-      headers: { Prefer: 'return=minimal' },
-    });
-  }
-}
-
-async function verifyCloudCounts(expected) {
-  const [feedRows, pinRows, savedRows] = await Promise.all([
-    runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', 'url')),
-    runCloudSelect('rss_pins', buildCloudSelectUrl('rss_pins', 'link')),
-    runCloudSelect('rss_saved_articles', buildCloudSelectUrl('rss_saved_articles', 'link')),
-  ]);
-  const actual = {
-    feeds: feedRows.length,
-    pins: pinRows.length,
-    saved: savedRows.length,
-  };
-  if (actual.feeds !== expected.feeds || actual.pins !== expected.pins || actual.saved !== expected.saved) {
-    throw new Error(`保存後の件数が一致しません（フィード ${actual.feeds}/${expected.feeds}、ピン ${actual.pins}/${expected.pins}、保存 ${actual.saved}/${expected.saved}）`);
-  }
-  return actual;
-}
-
-async function loadCloudState() {
+async function syncCloudState(reason = 'change') {
   if (!cloudEnabled) return false;
-  try {
-    const loadFeedRows = async () => {
-      const columnsWithFolder = 'url,title,color,folder,created_at,updated_at';
-      const columnsWithoutFolder = 'url,title,color,created_at,updated_at';
-      if (cloudFolderColumnMissing) {
-        return runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', columnsWithoutFolder, 'created_at.asc'));
-      }
-      try {
-        return await runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', columnsWithFolder, 'created_at.asc'));
-      } catch (err) {
-        if (!isFolderColumnError(err)) throw err;
-        cloudFolderColumnMissing = true;
-        notifyCloudFolderColumnMissing();
-        return runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', columnsWithoutFolder, 'created_at.asc'));
-      }
-    };
-    const [feedRows, pinRows, savedRows] = await Promise.all([
-      loadFeedRows(),
-      runCloudSelect('rss_pins', buildCloudSelectUrl('rss_pins', 'link')),
-      runCloudSelect('rss_saved_articles', buildCloudSelectUrl('rss_saved_articles', 'title,link,feed_url,pub_date,image,content,saved_at', 'saved_at.desc')),
-    ]);
+  clearTimeout(cloudSyncTimer);
+  const runSync = async () => {
+    try {
+      const loadFeedRows = async () => {
+        const columnsWithFolder = 'url,title,color,folder,created_at,updated_at,deleted_at';
+        const columnsWithoutFolder = 'url,title,color,created_at,updated_at,deleted_at';
+        if (cloudFolderColumnMissing) {
+          return runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', columnsWithoutFolder, 'created_at.asc'));
+        }
+        try {
+          return await runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', columnsWithFolder, 'created_at.asc'));
+        } catch (err) {
+          if (!isFolderColumnError(err) || /deleted_at/i.test(String(err?.message || ''))) throw err;
+          cloudFolderColumnMissing = true;
+          notifyCloudFolderColumnMissing();
+          return runCloudSelect('rss_feeds', buildCloudSelectUrl('rss_feeds', columnsWithoutFolder, 'created_at.asc'));
+        }
+      };
+      const [feedRows, pinRows, savedRows] = await Promise.all([
+        loadFeedRows(),
+        runCloudSelect('rss_pins', buildCloudSelectUrl('rss_pins', 'link,created_at,updated_at,deleted_at')),
+        runCloudSelect('rss_saved_articles', buildCloudSelectUrl('rss_saved_articles', 'title,link,feed_url,pub_date,image,content,saved_at,created_at,updated_at,deleted_at', 'saved_at.desc')),
+      ]);
 
-    if (Array.isArray(feedRows)) {
-      feeds = feedRows.map((row, index) => ({
-        url: row.url,
-        title: row.title || '',
-        color: isSafeColor(row.color) ? row.color : COLORS[index % COLORS.length],
-        folder: normalizeFolderName(row.folder),
-      })).filter(feed => /^https?:\/\//i.test(feed.url));
+      const cloudFeeds = mergeCloudFeeds(feedRows);
+      const cloudPins = mergeCloudPins(pinRows);
+      const cloudSaved = mergeCloudSaved(savedRows);
+      ensureLocalSyncVersions();
+      const expired = pruneExpiredLocalTombstones();
+
       saveFeeds({ skipCloud: true });
-    }
-    if (Array.isArray(pinRows)) {
-      pinnedUrls = new Set(pinRows.map(row => row.link).filter(Boolean));
+      saveDeletedFeeds();
       savePins({ skipCloud: true });
-    }
-    if (Array.isArray(savedRows)) {
-      savedArticles = savedRows.map(cloudArticleToLocal);
-      syncSavedUrls();
+      saveDeletedPins();
       saveSaved({ skipCloud: true });
-    }
-    updateCloudStatus('online');
-    if (feeds.length === 0) {
-      showStatus(`同期データを取得しましたが、フィードは0件です。共有ID違い、または同期元でフィード0件として保存されています。`, 9000);
-    } else {
+      saveDeletedSavedArticles();
+
+      const { feedRows: dirtyFeeds, pinRows: dirtyPins, savedRows: dirtySaved } = collectDirtyRows(cloudFeeds, cloudPins, cloudSaved);
+      await upsertCloudRows('rss_feeds', dirtyFeeds, ['profile_id', 'url']);
+      await upsertCloudRows('rss_pins', dirtyPins, ['profile_id', 'link']);
+      await upsertCloudRows('rss_saved_articles', dirtySaved, ['profile_id', 'link']);
+
+      const cleanup = [];
+      if (expired.feeds) cleanup.push(deleteExpiredCloudTombstones('rss_feeds'));
+      if (expired.pins) cleanup.push(deleteExpiredCloudTombstones('rss_pins'));
+      if (expired.saved) cleanup.push(deleteExpiredCloudTombstones('rss_saved_articles'));
+      if (cleanup.length > 0) await Promise.all(cleanup);
+
+      lastCloudSyncAt = Date.now();
+      updateCloudStatus('online');
+      refreshAfterCloudMerge();
       const folderNote = cloudFolderColumnMissing ? ' ※folder列が未作成のためフォルダは同期されません' : '';
-      showStatus(`同期データを取得しました（フィード${feeds.length}件 / ピン${pinnedUrls.size}件 / 保存${savedArticles.length}件）${folderNote}`, cloudFolderColumnMissing ? 9000 : 5000);
+      if (reason === 'manual') {
+        showStatus(`同期しました（フィード${feeds.length}件 / ピン${pinnedUrls.size}件 / 保存${savedArticles.length}件）${folderNote}`, cloudFolderColumnMissing ? 9000 : 5000);
+      } else if (reason === 'startup') {
+        showStatus(`同期データをマージしました（フィード${feeds.length}件 / ピン${pinnedUrls.size}件 / 保存${savedArticles.length}件）${folderNote}`, cloudFolderColumnMissing ? 9000 : 5000);
+      }
+      return true;
+    } catch (err) {
+      if (isMergeSchemaError(err)) {
+        throw new Error('Supabaseの同期用列が未作成です。supabase-schema.sqlをSQL Editorで再実行してください。');
+      }
+      throw err;
     }
-    return true;
-  } catch (err) {
-    console.error('[RSS Cloud] load failed', err);
-    showStatus(`同期データの取得に失敗: ${err.message}`, 9000);
-    updateCloudStatus();
-    return false;
-  }
+  };
+  cloudSyncPromise = cloudSyncPromise.then(runSync, runSync);
+  return cloudSyncPromise;
 }
 
 initCloudClient();
 
 let feeds = (() => { try { return JSON.parse(localStorage.getItem('rss-feeds') || '[]'); } catch { return []; } })();
+const loadedFeedUrls = new Set();
+feeds = (Array.isArray(feeds) ? feeds : []).map(feed => {
+  const url = normalizeHttpUrl(feed?.url);
+  if (!url || loadedFeedUrls.has(url)) return null;
+  loadedFeedUrls.add(url);
+  return {
+    url,
+    title: typeof feed.title === 'string' ? feed.title : '',
+    color: isSafeColor(feed.color) ? feed.color : '#5b9bd5',
+    folder: normalizeFolderName(feed.folder),
+    updatedAt: normalizeSyncDate(feed.updatedAt),
+  };
+}).filter(Boolean);
+let deletedFeeds = loadSyncTombstones(DELETED_FEEDS_STORAGE_KEY);
+
+function saveDeletedFeeds() {
+  saveSyncTombstones(DELETED_FEEDS_STORAGE_KEY, deletedFeeds);
+}
+
+function recordDeletedFeed(url, deletedAt = new Date()) {
+  deletedFeeds = deletedFeeds.filter(item => item.url !== url);
+  deletedFeeds.push({ url, deletedAt });
+  saveDeletedFeeds();
+}
+
+function clearDeletedFeed(url) {
+  const before = deletedFeeds.length;
+  deletedFeeds = deletedFeeds.filter(item => item.url !== url);
+  if (deletedFeeds.length !== before) saveDeletedFeeds();
+}
 
 // テーマ
 let currentTheme = localStorage.getItem('rss-theme') || 'dark';
@@ -4483,15 +4759,44 @@ function getFolderFeeds(folderName) {
 }
 
 // ピン: 記事URLのSet（localStorageで永続化）
-let pinnedUrls = new Set((() => { try { return JSON.parse(localStorage.getItem('rss-pinned') || '[]'); } catch { return []; } })());
+let pinnedUrls = new Set((() => {
+  try {
+    const value = JSON.parse(localStorage.getItem('rss-pinned') || '[]');
+    return (Array.isArray(value) ? value : []).map(normalizeHttpUrl).filter(Boolean);
+  } catch { return []; }
+})());
+let pinUpdatedAt = (() => {
+  try {
+    const value = JSON.parse(localStorage.getItem(PIN_VERSIONS_STORAGE_KEY) || '{}');
+    const map = new Map();
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      Object.entries(value).forEach(([url, updatedAt]) => {
+        const safeUrl = normalizeHttpUrl(url);
+        const date = normalizeSyncDate(updatedAt);
+        if (safeUrl && date && pinnedUrls.has(safeUrl)) map.set(safeUrl, date.getTime());
+      });
+    }
+    return map;
+  } catch { return new Map(); }
+})();
+let deletedPins = loadSyncTombstones(DELETED_PINS_STORAGE_KEY);
 let modalDraftPins = null; // ピンモーダル表示中の下書きセット
 
 // Read It Later: 保存した記事の配列（localStorageで永続化）
 let savedArticles = (() => { try { return JSON.parse(localStorage.getItem('rss-saved') || '[]'); } catch { return []; } })();
-savedArticles.forEach(a => {
-  if (a.pubDate) a.pubDate = normalizeArticleDate(a.pubDate);
-  if (a.savedAt) a.savedAt = new Date(a.savedAt);
-});
+savedArticles = (Array.isArray(savedArticles) ? savedArticles : [])
+  .filter(a => a && typeof a === 'object')
+  .map(a => ({
+    ...a,
+    link: normalizeHttpUrl(a.link),
+    feedUrl: normalizeHttpUrl(a.feedUrl),
+    image: normalizeHttpUrl(a.image),
+    pubDate: normalizeArticleDate(a.pubDate),
+    savedAt: normalizeSyncDate(a.savedAt) || new Date(),
+    updatedAt: normalizeSyncDate(a.updatedAt) || normalizeSyncDate(a.savedAt),
+  }))
+  .filter(a => a.link);
+let deletedSavedArticles = loadSyncTombstones(DELETED_SAVED_STORAGE_KEY);
 let savedUrls = new Set(savedArticles.map(a => a.link).filter(Boolean));
 
 // 新着記事URL（更新で新たに取得された記事）
@@ -4523,7 +4828,16 @@ function saveReadDebounced() {
   _saveReadTimer = setTimeout(saveRead, 400);
 }
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') saveRead();
+  if (document.visibilityState === 'hidden') {
+    saveRead();
+    return;
+  }
+  if (cloudEnabled && Date.now() - lastCloudSyncAt >= 60000) {
+    syncCloudState('resume').catch(err => {
+      console.error('[RSS Cloud] resume sync failed', err);
+      showStatus(`同期失敗: ${err.message}`, 9000);
+    });
+  }
 });
 
 function markArticleAsRead(article, index) {
@@ -4656,9 +4970,84 @@ function updateDetailActionButtons(article = filteredArticles[currentIndex]) {
   if (saveLabel) saveLabel.textContent = isSaved ? '保存済み' : '保存';
 }
 
+function getPinVersion(url) {
+  return Number(pinUpdatedAt.get(url)) || 0;
+}
+
+function savePinVersions() {
+  const data = {};
+  pinnedUrls.forEach(url => {
+    const version = getPinVersion(url);
+    if (version) data[url] = new Date(version).toISOString();
+  });
+  try { localStorage.setItem(PIN_VERSIONS_STORAGE_KEY, JSON.stringify(data)); } catch (err) {
+    console.warn('[RSS Cloud] ピンの更新日時を保存できませんでした', err);
+  }
+}
+
+function saveDeletedPins() {
+  saveSyncTombstones(DELETED_PINS_STORAGE_KEY, deletedPins);
+}
+
+function recordDeletedPin(url, deletedAt = new Date()) {
+  pinUpdatedAt.delete(url);
+  deletedPins = deletedPins.filter(item => item.url !== url);
+  deletedPins.push({ url, deletedAt });
+  saveDeletedPins();
+}
+
+function clearDeletedPin(url) {
+  const before = deletedPins.length;
+  deletedPins = deletedPins.filter(item => item.url !== url);
+  if (deletedPins.length !== before) saveDeletedPins();
+}
+
+function replacePins(nextPins) {
+  const normalized = new Set([...nextPins].map(normalizeHttpUrl).filter(Boolean));
+  const changedAt = new Date();
+  pinnedUrls.forEach(url => {
+    if (!normalized.has(url)) recordDeletedPin(url, changedAt);
+  });
+  normalized.forEach(url => {
+    if (!pinnedUrls.has(url)) {
+      pinUpdatedAt.set(url, changedAt.getTime());
+      clearDeletedPin(url);
+    }
+  });
+  pinnedUrls = normalized;
+}
+
+function saveDeletedSavedArticles() {
+  saveSyncTombstones(DELETED_SAVED_STORAGE_KEY, deletedSavedArticles);
+}
+
+function recordDeletedSavedArticle(url, deletedAt = new Date()) {
+  deletedSavedArticles = deletedSavedArticles.filter(item => item.url !== url);
+  deletedSavedArticles.push({ url, deletedAt });
+  saveDeletedSavedArticles();
+}
+
+function clearDeletedSavedArticle(url) {
+  const before = deletedSavedArticles.length;
+  deletedSavedArticles = deletedSavedArticles.filter(item => item.url !== url);
+  if (deletedSavedArticles.length !== before) saveDeletedSavedArticles();
+}
+
+function replaceSavedArticles(nextArticles) {
+  const changedAt = new Date();
+  const nextUrls = new Set(nextArticles.map(article => article.link).filter(Boolean));
+  savedArticles.forEach(article => {
+    if (article.link && !nextUrls.has(article.link)) recordDeletedSavedArticle(article.link, changedAt);
+  });
+  savedArticles = nextArticles.map(article => ({ ...article, updatedAt: changedAt }));
+  savedArticles.forEach(article => clearDeletedSavedArticle(article.link));
+  syncSavedUrls();
+}
+
 function savePins(options = {}) {
   try {
     localStorage.setItem('rss-pinned', JSON.stringify([...pinnedUrls]));
+    savePinVersions();
     if (!options.skipCloud) queueCloudSync('pins');
   } catch (e) {
     showStatus('ピン保存失敗: ストレージ容量不足の可能性があります', 4000);
@@ -4671,9 +5060,12 @@ function togglePin(index) {
   if (!url) { showStatus('この記事にはURLがありません'); return; }
   if (pinnedUrls.has(url)) {
     pinnedUrls.delete(url);
+    recordDeletedPin(url);
     showStatus('ピンを外しました');
   } else {
     pinnedUrls.add(url);
+    pinUpdatedAt.set(url, Date.now());
+    clearDeletedPin(url);
     showStatus('📍 ピンしました');
   }
   savePins();
@@ -4687,6 +5079,7 @@ function addPinToReadLater(url, btn) {
   if (!article) { showStatus('記事データが見つかりません'); return; }
   if (savedUrls.has(url)) {
     savedArticles = savedArticles.filter(a => a.link !== url);
+    recordDeletedSavedArticle(url);
     syncSavedUrls();
     saveSaved();
     updateReadLaterBtn();
@@ -4694,7 +5087,9 @@ function addPinToReadLater(url, btn) {
     setButtonHelp(btn, 'Read It Laterに追加');
     showStatus('保存を解除しました');
   } else {
-    savedArticles.unshift({ ...article, savedAt: new Date() });
+    const now = new Date();
+    savedArticles.unshift({ ...article, savedAt: now, updatedAt: now });
+    clearDeletedSavedArticle(url);
     syncSavedUrls();
     saveSaved();
     updateReadLaterBtn();
@@ -4765,7 +5160,7 @@ function closeMobilePinModal(applyDraft = true) {
   overlay.classList.remove('open');
   overlay.setAttribute('aria-hidden', 'true');
   if (applyDraft && modalDraftPins !== null) {
-    pinnedUrls = modalDraftPins;
+    replacePins(modalDraftPins);
     modalDraftPins = null;
     savePins();
     updatePinBar();
@@ -4795,7 +5190,7 @@ function openPinned() {
 function closePinModal() {
   document.getElementById('pin-bar').classList.remove('expanded');
   if (modalDraftPins !== null) {
-    pinnedUrls = modalDraftPins;
+    replacePins(modalDraftPins);
     modalDraftPins = null;
     savePins();
     updatePinBar();
@@ -4806,7 +5201,7 @@ function closePinModal() {
 
 function clearPins() {
   modalDraftPins = null;
-  pinnedUrls.clear();
+  replacePins(new Set());
   savePins();
   updatePinBar();
   syncArticleItemStates();
@@ -4845,9 +5240,12 @@ function toggleSave(index) {
 
   if (savedUrls.has(article.link)) {
     savedArticles = savedArticles.filter(a => a.link !== article.link);
+    recordDeletedSavedArticle(article.link);
     showStatus('保存を解除しました');
   } else {
-    savedArticles.unshift({ ...article, savedAt: new Date() });
+    const now = new Date();
+    savedArticles.unshift({ ...article, savedAt: now, updatedAt: now });
+    clearDeletedSavedArticle(article.link);
     showStatus('🔖 保存しました');
   }
   syncSavedUrls();
@@ -4984,6 +5382,7 @@ function normalizeImportedFeed(feed, index) {
     title: typeof feed.title === 'string' ? feed.title : '',
     color: isSafeColor(feed.color) ? feed.color : COLORS[index % COLORS.length],
     folder: normalizeFolderName(feed.folder),
+    updatedAt: new Date(),
   };
 }
 
@@ -5004,6 +5403,7 @@ function mergeImportedFeeds(importedFeeds) {
       return;
     }
     feeds.push(normalized);
+    clearDeletedFeed(normalized.url);
     knownUrls.add(normalized.url);
     added++;
   });
@@ -5282,6 +5682,7 @@ function parseFeed(xmlText, feedUrl) {
   const feedObj = feeds.find(f => f.url === feedUrl);
   if (feedObj && feedTitle && !feedObj.title) {
     feedObj.title = feedTitle;
+    feedObj.updatedAt = new Date();
     saveFeeds();
   }
 
@@ -5389,7 +5790,8 @@ async function addSingleFeed(url) {
   if (feeds.find(f => f.url === url)) return; // already exists
   const text = await fetchFeedWithFallback(url);
   const colorIndex = feeds.length % COLORS.length;
-  feeds.push({ url, title: '', color: COLORS[colorIndex], folder: '' });
+  feeds.push({ url, title: '', color: COLORS[colorIndex], folder: '', updatedAt: new Date() });
+  clearDeletedFeed(url);
   saveFeeds();
   const articles = parseFeed(text, url);
   allArticles = allArticles.filter(a => a.feedUrl !== url).concat(articles);
@@ -5586,6 +5988,7 @@ async function refreshAll() {
 function deleteFeed(url) {
   if (!confirm(`このフィードを削除しますか？\n${url}`)) return;
   feeds = feeds.filter(f => f.url !== url);
+  recordDeletedFeed(url);
   saveFeeds();
   allArticles = allArticles.filter(a => a.feedUrl !== url);
   saveArticles();
@@ -6707,12 +7110,12 @@ document.getElementById('load-input').addEventListener('change', (e) => {
       if (feedImportResult.added > 0) saveFeeds();
 
       if (Array.isArray(data.pinned)) {
-        pinnedUrls = new Set(data.pinned.filter(url => typeof url === 'string' && /^https?:\/\//i.test(url)));
+        replacePins(new Set(data.pinned.filter(url => typeof url === 'string' && /^https?:\/\//i.test(url))));
         savePins();
       }
 
       if (Array.isArray(data.saved)) {
-        savedArticles = data.saved
+        const importedSaved = data.saved
           .filter(a => a && typeof a === 'object')
           .map(a => ({
             ...a,
@@ -6721,10 +7124,10 @@ document.getElementById('load-input').addEventListener('change', (e) => {
             image: normalizeHttpUrl(a.image),
             content: typeof a.content === 'string' ? a.content : '',
             pubDate: normalizeArticleDate(a.pubDate),
-            savedAt: a.savedAt ? new Date(a.savedAt) : new Date(),
+            savedAt: normalizeSyncDate(a.savedAt) || new Date(),
           }))
           .filter(a => a.link);
-        savedUrls = new Set(savedArticles.map(a => a.link).filter(Boolean));
+        replaceSavedArticles(importedSaved);
         saveSaved();
       }
 
@@ -6913,12 +7316,13 @@ window.addEventListener('resize', restoreMobileDetailNavPosition);
   }
 
   if (cloudEnabled) {
-    if (hasLocalFeeds()) {
-      updateCloudStatus('online');
-      showStatus('ローカルにフィードがあります。サーバーへ保存するには設定の「同期」を押してください。', 7000);
-    } else {
-      showStatus('同期データを読み込み中...', 10000);
-      await loadCloudState();
+    showStatus('同期データをマージ中...', 10000);
+    try {
+      await syncCloudState('startup');
+    } catch (err) {
+      console.error('[RSS Cloud] startup sync failed', err);
+      showStatus(`同期データの取得に失敗: ${err.message}`, 9000);
+      updateCloudStatus();
     }
   }
   updatePinBar();
@@ -7096,7 +7500,8 @@ function importOpmlText(text) {
       folder = normalizeFolderName(parent.getAttribute('text') || parent.getAttribute('title'));
     }
     const title = (outline.getAttribute('title') || outline.getAttribute('text') || '').trim();
-    feeds.push({ url, title, color: COLORS[feeds.length % COLORS.length], folder });
+    feeds.push({ url, title, color: COLORS[feeds.length % COLORS.length], folder, updatedAt: new Date() });
+    clearDeletedFeed(url);
     added++;
   });
   if (added === 0 && skipped === 0) throw new Error('OPML内にフィードが見つかりません');
@@ -7201,6 +7606,7 @@ function applyFolderModal() {
     const changed = getFeedFolder(feed) !== nextFolder;
     feed.folder = nextFolder;
     if (changed) {
+      feed.updatedAt = new Date();
       saveFeeds();
       renderFeedSelect();
       applyFilter();
@@ -7214,7 +7620,11 @@ function applyFolderModal() {
   const oldName = folderModalState.folderName;
   if (!typedName) { showStatus('フォルダ名を入力してください'); return; }
   if (typedName !== oldName) {
-    getFolderFeeds(oldName).forEach(feed => { feed.folder = typedName; });
+    const changedAt = new Date();
+    getFolderFeeds(oldName).forEach(feed => {
+      feed.folder = typedName;
+      feed.updatedAt = changedAt;
+    });
     saveFeeds();
     selectedFeedUrl = FOLDER_STATE_PREFIX + typedName;
     renderFeedSelect();
@@ -7228,7 +7638,11 @@ function dissolveFolderFromModal() {
   if (!folderModalState || folderModalState.mode !== 'manage') return;
   const folderName = folderModalState.folderName;
   if (!confirm(`フォルダ「${folderName}」を解除しますか？\n（中のフィードは未分類に戻ります。フィード自体は削除されません）`)) return;
-  getFolderFeeds(folderName).forEach(feed => { feed.folder = ''; });
+  const changedAt = new Date();
+  getFolderFeeds(folderName).forEach(feed => {
+    feed.folder = '';
+    feed.updatedAt = changedAt;
+  });
   saveFeeds();
   selectedFeedUrl = null;
   currentIndex = -1;
@@ -7395,15 +7809,12 @@ document.getElementById('rss-settings-save-btn').addEventListener('click', async
   });
   document.getElementById('rss-settings-overlay').style.display = 'none';
   if (cloudEnabled) {
-    if (hasLocalFeeds()) {
-      await pushCloudState('manual');
-    } else {
-      await loadCloudState();
+    try {
+      await syncCloudState('manual');
+    } catch (err) {
+      console.error('[RSS Cloud] settings sync failed', err);
+      showStatus(`同期失敗: ${err.message}`, 9000);
     }
-    updatePinBar();
-    updateReadLaterBtn();
-    renderFeedSelect();
-    applyFilter();
     return;
   }
   showStatus(customProxyUrl ? 'カスタムプロキシを設定しました' : 'ローカルモードで使用します');
@@ -7420,14 +7831,10 @@ document.getElementById('cloud-sync-now-btn').addEventListener('click', async ()
     return;
   }
   try {
-    if (hasLocalFeeds()) await pushCloudState('manual');
-    await loadCloudState();
-    updatePinBar();
-    updateReadLaterBtn();
-    renderFeedSelect();
-    applyFilter();
+    await syncCloudState('manual');
   } catch (err) {
-    showStatus(`同期失敗: ${err.message}`, 5000);
+    console.error('[RSS Cloud] manual sync failed', err);
+    showStatus(`同期失敗: ${err.message}`, 9000);
   }
 });
 
