@@ -3396,8 +3396,9 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-21.merge-tombstones';
+const APP_VERSION = '2026-07-22.folder-init-fix';
 const DEFAULT_PROFILE_ID = 'default';
+const FOLDER_NAME_MAX = 30;
 const CONFIG_HASH_PREFIX = '#rss-config=';
 const QR_LIB_URL = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1/qrcode.min.js';
 const CLOUD_BATCH_SIZE = 50;
@@ -4736,7 +4737,6 @@ let currentIndex = -1;
 const FOLDER_STATE_PREFIX = 'FOLDER:';
 // <select> の option 値用の接頭辞
 const FOLDER_SELECT_PREFIX = '__folder__:';
-const FOLDER_NAME_MAX = 30;
 
 function normalizeFolderName(value) {
   return typeof value === 'string' ? value.trim().slice(0, FOLDER_NAME_MAX) : '';
