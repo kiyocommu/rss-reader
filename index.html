@@ -330,6 +330,61 @@
     #rss-custom-proxy-input::placeholder,
     #rss-auto-refresh-input::placeholder { color: #3a4a5a; }
     .rss-settings-hint { font-size: 11px; color: #5a6a7a; margin-top: 8px; line-height: 1.5; }
+    .offline-settings {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid #2c3f63;
+    }
+    .offline-settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .offline-settings-title {
+      color: #c8d6e5;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    #offline-save-btn {
+      min-height: 44px;
+      padding: 0 14px;
+      border: 1px solid #2b4f76;
+      border-radius: 6px;
+      background: transparent;
+      color: #b0bdd0;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    #offline-save-btn:hover,
+    #offline-save-btn:focus-visible {
+      background: #17284a;
+      border-color: #e94560;
+      color: #fff;
+    }
+    #offline-save-btn:disabled {
+      cursor: default;
+      opacity: 0.52;
+    }
+    #offline-save-btn:disabled:hover { background: transparent; border-color: #2b4f76; color: #b0bdd0; }
+    #offline-save-status { min-height: 3em; margin-bottom: 0; }
+    #offline-delete-btn {
+      min-height: 44px;
+      margin-top: 4px;
+      padding: 0 4px;
+      border: 0;
+      background: transparent;
+      color: #7a8ba0;
+      cursor: pointer;
+      font-size: 11px;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    #offline-delete-btn:hover,
+    #offline-delete-btn:focus-visible { color: #e94560; }
+    #offline-delete-btn[hidden] { display: none; }
     .settings-row {
       display: flex;
       align-items: center;
@@ -1973,6 +2028,26 @@
     body.light #rss-settings-close-btn:hover { color: var(--rss-accent); }
     body.light #rss-settings-modal-body label,
     body.light .rss-settings-hint { color: var(--rss-muted); }
+    body.light .offline-settings { border-color: var(--rss-border); }
+    body.light .offline-settings-title { color: var(--rss-text); }
+    body.light #offline-save-btn {
+      border-color: var(--rss-border);
+      color: var(--rss-muted);
+    }
+    body.light #offline-save-btn:hover,
+    body.light #offline-save-btn:focus-visible {
+      background: var(--rss-accent-soft);
+      border-color: var(--rss-accent);
+      color: var(--rss-accent);
+    }
+    body.light #offline-save-btn:disabled:hover {
+      background: transparent;
+      border-color: var(--rss-border);
+      color: var(--rss-muted);
+    }
+    body.light #offline-delete-btn { color: var(--rss-muted); }
+    body.light #offline-delete-btn:hover,
+    body.light #offline-delete-btn:focus-visible { color: var(--rss-accent); }
     body.light .settings-row {
       background: var(--rss-panel-soft);
       border-color: var(--rss-border);
@@ -2558,6 +2633,8 @@
         height: 44px;
         padding: 0 18px;
       }
+      .offline-settings-header { align-items: flex-start; }
+      #offline-save-btn { flex-shrink: 0; }
       #save-btn,
       #load-btn,
       #shortcuts,
@@ -3354,6 +3431,14 @@
           <img id="rss-cloud-qr-img" alt="設定引き継ぎ用QRコード">
         </div>
       </div>
+      <section id="offline-settings" class="offline-settings" aria-labelledby="offline-settings-title" aria-busy="false">
+        <div class="offline-settings-header">
+          <span id="offline-settings-title" class="offline-settings-title">オフライン</span>
+          <button id="offline-save-btn" type="button">オフライン用に保存</button>
+        </div>
+        <p id="offline-save-status" class="rss-settings-hint" role="status" aria-live="polite">保存状態を確認しています…</p>
+        <button id="offline-delete-btn" type="button" hidden>オフラインデータを削除</button>
+      </section>
     </div>
     <div id="rss-settings-modal-footer">
       <button id="cloud-sync-now-btn" data-tooltip="今すぐ同期" aria-label="Supabaseと同期">同期</button>
@@ -3509,7 +3594,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-22.collapsible-folders';
+const APP_VERSION = '2026-07-22.offline-download';
 const DEFAULT_PROFILE_ID = 'default';
 const FOLDER_NAME_MAX = 30;
 const CONFIG_HASH_PREFIX = '#rss-config=';
@@ -4307,6 +4392,15 @@ let allArticles = [];
 
 const ARTICLE_DB_NAME = 'rss-reader-db';
 const ARTICLE_DB_STORE = 'kv';
+const OFFLINE_SNAPSHOT_DB_KEY = 'offlineSnapshot';
+const OFFLINE_META_STORAGE_KEY = 'rss-offline-meta';
+const OFFLINE_MEDIA_CACHE_NAME = 'rss-reader-offline-images-v1';
+const OFFLINE_SNAPSHOT_VERSION = 1;
+const OFFLINE_ARTICLE_LIMIT = 100;
+const OFFLINE_IMAGE_LIMIT = 300;
+const OFFLINE_IMAGE_CONCURRENCY = 4;
+const OFFLINE_IMAGE_TIMEOUT_MS = 15000;
+const OFFLINE_SAFE_QUOTA_RATIO = 0.8;
 let articleDbFailed = typeof indexedDB === 'undefined';
 
 function openArticleDb() {
@@ -4344,6 +4438,17 @@ async function idbGet(key) {
   });
 }
 
+async function idbDelete(key) {
+  const db = await openArticleDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(ARTICLE_DB_STORE, 'readwrite');
+    tx.objectStore(ARTICLE_DB_STORE).delete(key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+    tx.onabort = () => { db.close(); reject(tx.error || new Error('IndexedDB tx aborted')); };
+  });
+}
+
 function normalizeArticleDate(value) {
   if (value === null || value === undefined || value === '') return new Date(0);
   let normalized = value;
@@ -4360,6 +4465,15 @@ function normalizeArticleDate(value) {
 function serializeArticleDate(value) {
   if (value === null || value === undefined || value === '') return null;
   return normalizeArticleDate(value).toISOString();
+}
+
+function serializeArticleForStorage(article) {
+  return {
+    ...article,
+    pubDate: serializeArticleDate(article.pubDate),
+    savedAt: article.savedAt ? normalizeArticleDate(article.savedAt).toISOString() : undefined,
+    updatedAt: article.updatedAt ? normalizeArticleDate(article.updatedAt).toISOString() : undefined,
+  };
 }
 
 function reviveStoredArticles(stored) {
@@ -4394,6 +4508,78 @@ async function loadStoredArticles() {
   } catch {
     return [];
   }
+}
+
+function normalizeOfflineSnapshot(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  if (value.version !== OFFLINE_SNAPSHOT_VERSION || !Array.isArray(value.articles)) return null;
+  const savedAt = normalizeSyncDate(value.savedAt);
+  if (!savedAt) return null;
+  const articles = value.articles
+    .filter(article => article && typeof article === 'object' && !Array.isArray(article))
+    .map(article => ({
+      ...article,
+      title: typeof article.title === 'string' ? article.title : '(タイトルなし)',
+      link: normalizeHttpUrl(article.link),
+      feedUrl: normalizeHttpUrl(article.feedUrl),
+      image: normalizeHttpUrl(article.image, article.link || article.feedUrl),
+      content: typeof article.content === 'string' ? article.content : '',
+      pubDate: normalizeArticleDate(article.pubDate),
+      savedAt: normalizeSyncDate(article.savedAt),
+      updatedAt: normalizeSyncDate(article.updatedAt),
+    }))
+    .filter(article => article.link);
+  return { version: OFFLINE_SNAPSHOT_VERSION, savedAt, articles };
+}
+
+async function loadOfflineSnapshot() {
+  if (articleDbFailed) return null;
+  try {
+    return normalizeOfflineSnapshot(await idbGet(OFFLINE_SNAPSHOT_DB_KEY));
+  } catch (err) {
+    console.warn('[RSS Offline] スナップショットを読み込めませんでした', err);
+    return null;
+  }
+}
+
+async function saveOfflineSnapshot(articles) {
+  if (articleDbFailed) throw new Error('このブラウザではIndexedDBを利用できません');
+  const snapshot = {
+    version: OFFLINE_SNAPSHOT_VERSION,
+    savedAt: new Date().toISOString(),
+    articles: articles.map(serializeArticleForStorage),
+  };
+  await idbSet(OFFLINE_SNAPSHOT_DB_KEY, snapshot);
+  return snapshot.savedAt;
+}
+
+async function deleteOfflineSnapshot() {
+  if (articleDbFailed) return;
+  await idbDelete(OFFLINE_SNAPSHOT_DB_KEY);
+}
+
+function mergeOfflineSnapshotArticles(currentArticles, snapshotArticles) {
+  const merged = [...currentArticles];
+  const indexes = new Map();
+  merged.forEach((article, index) => {
+    if (article?.link) indexes.set(article.link, index);
+  });
+  snapshotArticles.forEach(article => {
+    const existingIndex = indexes.get(article.link);
+    if (existingIndex === undefined) {
+      indexes.set(article.link, merged.length);
+      merged.push(article);
+      return;
+    }
+    const existing = merged[existingIndex];
+    merged[existingIndex] = {
+      ...article,
+      ...existing,
+      content: existing.content || article.content || '',
+      image: existing.image || article.image || '',
+    };
+  });
+  return merged.sort((a, b) => normalizeArticleDate(b.pubDate) - normalizeArticleDate(a.pubDate));
 }
 
 // ============================================================
@@ -5499,6 +5685,57 @@ function normalizeHttpUrl(rawUrl, baseUrl) {
   }
 }
 
+function normalizeSrcset(rawSrcset, baseUrl) {
+  const raw = String(rawSrcset || '').trim();
+  if (!raw) return { value: '', urls: [] };
+  // data URL はカンマを含み標準的な単純分割ができないため、そのまま保持する。
+  if (/^data:image\//i.test(raw)) return { value: raw, urls: [] };
+
+  const normalized = [];
+  const urls = [];
+  raw.split(',').forEach(candidate => {
+    const parts = candidate.trim().split(/\s+/);
+    const rawUrl = parts.shift();
+    const descriptor = parts.join(' ');
+    if (!rawUrl || (descriptor && !/^\d+(?:\.\d+)?[wx]$/.test(descriptor))) return;
+    const url = normalizeHttpUrl(rawUrl, baseUrl);
+    if (!url) return;
+    normalized.push(descriptor ? `${url} ${descriptor}` : url);
+    urls.push(url);
+  });
+  return { value: normalized.join(', '), urls };
+}
+
+function normalizeArticleMediaUrls(root, article) {
+  if (!root?.querySelectorAll) return [];
+  const baseUrl = normalizeHttpUrl(article?.link) || normalizeHttpUrl(article?.feedUrl) || location.href;
+  const urls = [];
+
+  root.querySelectorAll('img[src], source[src]').forEach(element => {
+    const rawSrc = element.getAttribute('src') || '';
+    if (/^data:image\//i.test(rawSrc)) return;
+    const src = normalizeHttpUrl(rawSrc, baseUrl);
+    if (!src) {
+      element.removeAttribute('src');
+      return;
+    }
+    element.setAttribute('src', src);
+    urls.push(src);
+  });
+
+  root.querySelectorAll('img[srcset], source[srcset]').forEach(element => {
+    const normalized = normalizeSrcset(element.getAttribute('srcset'), baseUrl);
+    if (!normalized.value) {
+      element.removeAttribute('srcset');
+      return;
+    }
+    element.setAttribute('srcset', normalized.value);
+    urls.push(...normalized.urls);
+  });
+
+  return urls;
+}
+
 function isSafeColor(value) {
   return /^#[0-9a-fA-F]{6}$/.test(String(value || ''));
 }
@@ -5880,24 +6117,21 @@ function saveFeeds(options = {}) {
 }
 
 function saveArticles() {
-  const data = allArticles.map(a => ({
-    ...a,
-    pubDate: serializeArticleDate(a.pubDate),
-  }));
+  const data = allArticles.map(serializeArticleForStorage);
   if (!articleDbFailed) {
-    idbSet('articles', data).catch(e => {
+    return idbSet('articles', data).then(() => true).catch(e => {
       console.warn('[RSS] IndexedDB保存失敗。localStorageに切り替えます', e);
       articleDbFailed = true;
-      saveArticlesToLocalStorage(data);
+      return saveArticlesToLocalStorage(data);
     });
-    return;
   }
-  saveArticlesToLocalStorage(data);
+  return Promise.resolve(saveArticlesToLocalStorage(data));
 }
 
 function saveArticlesToLocalStorage(data) {
   try {
     localStorage.setItem('rss-articles', JSON.stringify(data));
+    return true;
   } catch (e) {
     // ストレージ容量超過時はcontentを省いて再試行
     try {
@@ -5910,7 +6144,11 @@ function saveArticlesToLocalStorage(data) {
       }));
       localStorage.setItem('rss-articles', JSON.stringify(slim));
       showStatus('ストレージ容量不足のため、記事本文を省略して保存しました', 6000);
-    } catch {}
+      return true;
+    } catch (fallbackError) {
+      console.warn('[RSS] localStorageへの記事保存にも失敗しました', fallbackError);
+      return false;
+    }
   }
 }
 
@@ -5998,7 +6236,7 @@ async function refreshFeed(url, skipSave = false) {
     recordFeedHealth(url, false, e);
     return { ok: false, count: 0, error: e, url };
   } finally {
-    if (!skipSave) { saveArticles(); saveFeedHealth(); }
+    if (!skipSave) { await saveArticles(); saveFeedHealth(); }
   }
 }
 
@@ -6044,7 +6282,7 @@ async function refreshFolder(folderName, spinBtn) {
       const result = await refreshFeed(feed.url, true); // 保存は完了後に1回
       if (!result.ok) failed++;
     }
-    saveArticles();
+    await saveArticles();
     saveFeedHealth();
     renderFeedSelect();
     applyFilter();
@@ -6060,11 +6298,15 @@ async function refreshFolder(folderName, spinBtn) {
 }
 
 async function refreshAll() {
-  if (isRefreshing) return;
+  if (isRefreshing) return { skipped: true, reason: 'busy', total: feeds.length, success: 0, failures: [] };
   isRefreshing = true;
   lastAutoRefreshAt = Date.now();
   newArticleLinks.clear();
-  if (feeds.length === 0) { isRefreshing = false; showStatus('フィードが登録されていません'); return; }
+  if (feeds.length === 0) {
+    isRefreshing = false;
+    showStatus('フィードが登録されていません');
+    return { skipped: false, total: 0, success: 0, failures: [] };
+  }
   const spinner = document.getElementById('loading-spinner');
   spinner.style.display = 'inline-block';
   const total = feeds.length;
@@ -6091,7 +6333,7 @@ async function refreshAll() {
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
   } finally {
     try {
-      saveArticles();
+      await saveArticles();
       saveFeedHealth();
       renderFeedSelect();
       applyFilter();
@@ -6111,6 +6353,435 @@ async function refreshAll() {
         isRefreshing = false;
       }
     }
+  }
+  return { skipped: false, total, success: total - failures.length, failures };
+}
+
+// ============================================================
+// Offline download
+// ============================================================
+let offlinePreparing = false;
+let offlineMeta = loadOfflineMeta();
+
+function normalizeOfflineCount(value) {
+  return Number.isInteger(value) && value >= 0 ? value : 0;
+}
+
+function normalizeOfflineMeta(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  if (value.version !== OFFLINE_SNAPSHOT_VERSION) return null;
+  const savedAt = normalizeSyncDate(value.savedAt);
+  if (!savedAt) return null;
+  return {
+    version: OFFLINE_SNAPSHOT_VERSION,
+    savedAt: savedAt.toISOString(),
+    articleCount: normalizeOfflineCount(value.articleCount),
+    imageCount: normalizeOfflineCount(value.imageCount),
+    imageFailedCount: normalizeOfflineCount(value.imageFailedCount),
+    imageSkippedCount: normalizeOfflineCount(value.imageSkippedCount),
+    refreshFailedCount: normalizeOfflineCount(value.refreshFailedCount),
+    persistent: value.persistent === true,
+  };
+}
+
+function loadOfflineMeta() {
+  try {
+    return normalizeOfflineMeta(JSON.parse(localStorage.getItem(OFFLINE_META_STORAGE_KEY) || 'null'));
+  } catch (err) {
+    console.warn('[RSS Offline] 保存状態を読み込めませんでした', err);
+    return null;
+  }
+}
+
+function saveOfflineMeta(meta) {
+  offlineMeta = normalizeOfflineMeta(meta);
+  if (!offlineMeta) throw new Error('オフライン保存状態が不正です');
+  try {
+    localStorage.setItem(OFFLINE_META_STORAGE_KEY, JSON.stringify(offlineMeta));
+  } catch (err) {
+    console.warn('[RSS Offline] 保存状態をlocalStorageへ記録できませんでした', err);
+  }
+}
+
+async function restoreOfflineMetaFromSnapshot(snapshot) {
+  if (offlineMeta || !snapshot) return;
+  let imageCount = 0;
+  if ('caches' in window) {
+    try {
+      const cache = await caches.open(OFFLINE_MEDIA_CACHE_NAME);
+      imageCount = (await cache.keys()).length;
+    } catch (err) {
+      console.warn('[RSS Offline] 画像キャッシュ件数を復元できませんでした', err);
+    }
+  }
+  let persistent = false;
+  if (navigator.storage?.persisted) {
+    try {
+      persistent = await navigator.storage.persisted();
+    } catch (err) {
+      console.warn('[RSS Offline] ストレージ永続状態を確認できませんでした', err);
+    }
+  }
+  saveOfflineMeta({
+    version: OFFLINE_SNAPSHOT_VERSION,
+    savedAt: snapshot.savedAt,
+    articleCount: snapshot.articles.length,
+    imageCount,
+    imageFailedCount: 0,
+    imageSkippedCount: 0,
+    refreshFailedCount: 0,
+    persistent,
+  });
+}
+
+function isOfflineDownloadSupported() {
+  return window.isSecureContext
+    && /^https?:$/.test(location.protocol)
+    && 'serviceWorker' in navigator
+    && 'caches' in window
+    && typeof indexedDB !== 'undefined';
+}
+
+function getOfflineUnavailableMessage() {
+  if (!window.isSecureContext || !/^https?:$/.test(location.protocol)) {
+    return 'オフライン保存はHTTPSまたはlocalhostで利用できます。';
+  }
+  return 'このブラウザではオフライン保存に必要な端末ストレージを利用できません。';
+}
+
+function formatOfflineSavedAt(value) {
+  const date = normalizeSyncDate(value);
+  if (!date) return '';
+  return date.toLocaleString('ja-JP', {
+    year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function setOfflineStatusMessage(message) {
+  const status = document.getElementById('offline-save-status');
+  if (status) status.textContent = message;
+}
+
+function renderOfflineStatus(message = '') {
+  const section = document.getElementById('offline-settings');
+  const saveButton = document.getElementById('offline-save-btn');
+  const deleteButton = document.getElementById('offline-delete-btn');
+  if (!section || !saveButton || !deleteButton) return;
+
+  const supported = isOfflineDownloadSupported() && !articleDbFailed;
+  section.setAttribute('aria-busy', offlinePreparing ? 'true' : 'false');
+  saveButton.disabled = offlinePreparing || !supported;
+  deleteButton.disabled = offlinePreparing;
+  deleteButton.hidden = !offlineMeta;
+
+  if (message) {
+    setOfflineStatusMessage(message);
+    return;
+  }
+  if (!supported) {
+    setOfflineStatusMessage(getOfflineUnavailableMessage());
+    return;
+  }
+  const offlinePrefix = navigator.onLine === false ? '現在オフラインです。' : '';
+  if (!offlineMeta) {
+    setOfflineStatusMessage(`${offlinePrefix}未保存です。最新100件とRead It Laterを端末に保存します。`);
+    return;
+  }
+  const failureCount = offlineMeta.imageFailedCount + offlineMeta.imageSkippedCount;
+  const imageNote = failureCount > 0 ? `、画像未保存${failureCount}件` : '';
+  const refreshNote = offlineMeta.refreshFailedCount > 0 ? `、更新失敗${offlineMeta.refreshFailedCount}フィード` : '';
+  setOfflineStatusMessage(`${offlinePrefix}保存済み ${formatOfflineSavedAt(offlineMeta.savedAt)}・記事${offlineMeta.articleCount}件・画像${offlineMeta.imageCount}件${imageNote}${refreshNote}`);
+}
+
+function buildOfflineArticles() {
+  const recent = [...allArticles]
+    .filter(article => article && normalizeHttpUrl(article.link))
+    .sort((a, b) => normalizeArticleDate(b.pubDate) - normalizeArticleDate(a.pubDate))
+    .slice(0, OFFLINE_ARTICLE_LIMIT);
+  const byLink = new Map();
+
+  const addArticle = article => {
+    const link = normalizeHttpUrl(article?.link);
+    if (!link) return;
+    const normalized = {
+      ...article,
+      title: typeof article.title === 'string' ? article.title : '(タイトルなし)',
+      link,
+      feedUrl: normalizeHttpUrl(article.feedUrl),
+      image: normalizeHttpUrl(article.image, link || article.feedUrl),
+      content: typeof article.content === 'string' ? article.content : '',
+      pubDate: normalizeArticleDate(article.pubDate),
+    };
+    const existing = byLink.get(link);
+    if (!existing) {
+      byLink.set(link, normalized);
+      return;
+    }
+    byLink.set(link, {
+      ...normalized,
+      ...existing,
+      content: existing.content || normalized.content,
+      image: existing.image || normalized.image,
+    });
+  };
+
+  recent.forEach(addArticle);
+  savedArticles.forEach(addArticle);
+  return [...byLink.values()];
+}
+
+function collectOfflineImageUrls(articles) {
+  const urls = new Set();
+  articles.forEach(article => {
+    const cover = normalizeHttpUrl(article.image, article.link || article.feedUrl);
+    if (cover) urls.add(cover);
+  });
+  articles.forEach(article => {
+    if (!article.content) return;
+    const doc = new DOMParser().parseFromString(sanitizeHTML(article.content), 'text/html');
+    normalizeArticleMediaUrls(doc.body, article).forEach(url => urls.add(url));
+  });
+  const allUrls = [...urls];
+  return {
+    urls: allUrls.slice(0, OFFLINE_IMAGE_LIMIT),
+    totalFound: allUrls.length,
+    truncated: Math.max(0, allUrls.length - OFFLINE_IMAGE_LIMIT),
+  };
+}
+
+async function requestPersistentOfflineStorage() {
+  if (!navigator.storage?.persist) return false;
+  try {
+    if (navigator.storage.persisted && await navigator.storage.persisted()) return true;
+    return await navigator.storage.persist();
+  } catch (err) {
+    console.warn('[RSS Offline] 永続ストレージを要求できませんでした', err);
+    return false;
+  }
+}
+
+async function isOfflineStorageNearLimit() {
+  if (!navigator.storage?.estimate) return false;
+  try {
+    const estimate = await navigator.storage.estimate();
+    return Number.isFinite(estimate.usage)
+      && Number.isFinite(estimate.quota)
+      && estimate.quota > 0
+      && estimate.usage / estimate.quota >= OFFLINE_SAFE_QUOTA_RATIO;
+  } catch (err) {
+    console.warn('[RSS Offline] ストレージ使用量を確認できませんでした', err);
+    return false;
+  }
+}
+
+function withOfflineTimeout(promise, timeoutMs, message) {
+  let timerId;
+  const timeout = new Promise((_, reject) => {
+    timerId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timerId));
+}
+
+async function ensureOfflineServiceWorker() {
+  const registration = await withOfflineTimeout(
+    navigator.serviceWorker.register('./sw.js'),
+    12000,
+    'Service Workerの準備がタイムアウトしました'
+  );
+  registration.update().catch(err => {
+    console.warn('[RSS Offline] Service Workerの更新確認に失敗しました', err);
+  });
+  await withOfflineTimeout(
+    navigator.serviceWorker.ready,
+    12000,
+    'Service Workerを有効にできませんでした'
+  );
+}
+
+async function fetchOfflineImage(url) {
+  const controller = new AbortController();
+  const timerId = setTimeout(() => controller.abort(), OFFLINE_IMAGE_TIMEOUT_MS);
+  try {
+    const request = new Request(url, {
+      method: 'GET',
+      mode: 'no-cors',
+      credentials: 'omit',
+      cache: 'no-store',
+      referrerPolicy: 'no-referrer',
+      signal: controller.signal,
+    });
+    const response = await fetch(request);
+    if (response.type !== 'opaque' && !response.ok) {
+      throw new Error(`画像取得失敗（HTTP ${response.status}）`);
+    }
+    if (response.type !== 'opaque') {
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType && !contentType.toLowerCase().startsWith('image/')) {
+        throw new Error('画像ではない応答を受信しました');
+      }
+    }
+    return { request, response };
+  } finally {
+    clearTimeout(timerId);
+  }
+}
+
+async function cacheOfflineImages(urls, onProgress) {
+  const cache = await caches.open(OFFLINE_MEDIA_CACHE_NAME);
+  const desiredUrls = new Set(urls);
+  let cursor = 0;
+  let completed = 0;
+  let succeeded = 0;
+  let failed = 0;
+  let reused = 0;
+  let quotaStopped = false;
+  let quotaSkipped = 0;
+  let nextQuotaCheckAt = 0;
+
+  async function shouldStopForQuota() {
+    if (completed < nextQuotaCheckAt) return false;
+    nextQuotaCheckAt = completed + 20;
+    return isOfflineStorageNearLimit();
+  }
+
+  async function worker() {
+    while (!quotaStopped) {
+      const index = cursor++;
+      if (index >= urls.length) return;
+      const url = urls[index];
+      try {
+        if (await cache.match(url)) {
+          succeeded++;
+          reused++;
+        } else if (await shouldStopForQuota()) {
+          quotaStopped = true;
+          quotaSkipped++;
+        } else {
+          const { request, response } = await fetchOfflineImage(url);
+          await cache.put(request, response);
+          succeeded++;
+        }
+      } catch (err) {
+        failed++;
+        if (err?.name === 'QuotaExceededError') quotaStopped = true;
+        console.warn(`[RSS Offline] 画像を保存できませんでした: ${url}`, err);
+      } finally {
+        completed++;
+        onProgress?.({ completed, total: urls.length, succeeded, failed });
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: OFFLINE_IMAGE_CONCURRENCY }, worker));
+  quotaSkipped += Math.max(0, urls.length - completed);
+
+  try {
+    const cachedRequests = await cache.keys();
+    await Promise.all(cachedRequests
+      .filter(request => !desiredUrls.has(request.url))
+      .map(request => cache.delete(request)));
+  } catch (err) {
+    console.warn('[RSS Offline] 対象外画像の整理に失敗しました', err);
+  }
+
+  return { succeeded, failed, reused, quotaSkipped, quotaStopped };
+}
+
+async function prepareOfflineData() {
+  if (offlinePreparing) return;
+  if (!isOfflineDownloadSupported() || articleDbFailed) {
+    renderOfflineStatus(getOfflineUnavailableMessage());
+    return;
+  }
+  if (navigator.onLine === false) {
+    renderOfflineStatus(offlineMeta
+      ? '現在オフラインです。前回保存した記事を閲覧できます。'
+      : '現在オフラインのため、保存を開始できません。');
+    return;
+  }
+  if (isRefreshing) {
+    renderOfflineStatus('フィードを更新中です。完了後にもう一度押してください。');
+    return;
+  }
+
+  offlinePreparing = true;
+  document.getElementById('offline-settings').setAttribute('aria-busy', 'true');
+  document.getElementById('offline-save-btn').disabled = true;
+  document.getElementById('offline-delete-btn').disabled = true;
+  let finalMessage = '';
+
+  try {
+    setOfflineStatusMessage('オフライン保存を準備しています…');
+    const persistent = await requestPersistentOfflineStorage();
+    await ensureOfflineServiceWorker();
+
+    setOfflineStatusMessage('フィードを更新しています…');
+    const refreshResult = await refreshAll();
+    if (refreshResult.skipped) throw new Error('フィードを更新中です。完了後にもう一度お試しください');
+
+    const articles = buildOfflineArticles();
+    setOfflineStatusMessage(`記事${articles.length}件を保存しています…`);
+    await saveArticles();
+    const savedAt = await saveOfflineSnapshot(articles);
+
+    const imagePlan = collectOfflineImageUrls(articles);
+    const imageResult = await cacheOfflineImages(imagePlan.urls, progress => {
+      setOfflineStatusMessage(`画像を保存しています… ${progress.completed}/${progress.total}（成功${progress.succeeded}件）`);
+    });
+
+    const imageSkippedCount = imagePlan.truncated + imageResult.quotaSkipped;
+    saveOfflineMeta({
+      version: OFFLINE_SNAPSHOT_VERSION,
+      savedAt,
+      articleCount: articles.length,
+      imageCount: imageResult.succeeded,
+      imageFailedCount: imageResult.failed,
+      imageSkippedCount,
+      refreshFailedCount: refreshResult.failures.length,
+      persistent,
+    });
+
+    const incompleteCount = imageResult.failed + imageSkippedCount;
+    const incompleteNote = incompleteCount > 0 ? `（画像${incompleteCount}件は未保存）` : '';
+    finalMessage = `保存完了: 記事${articles.length}件・画像${imageResult.succeeded}件${incompleteNote}`;
+    showStatus(finalMessage, 6000);
+  } catch (err) {
+    console.error('[RSS Offline] オフライン保存に失敗しました', err);
+    finalMessage = `保存に失敗しました: ${err.message || '原因不明'}`;
+    showStatus(finalMessage, 7000);
+  } finally {
+    offlinePreparing = false;
+    renderOfflineStatus(finalMessage);
+  }
+}
+
+async function clearOfflineData() {
+  if (offlinePreparing || !offlineMeta) return;
+  if (!confirm('オフライン用に保存した記事と画像を削除しますか？\n通常の記事履歴とRead It Laterは残ります。')) return;
+  offlinePreparing = true;
+  renderOfflineStatus('オフラインデータを削除しています…');
+  let finalMessage = '';
+  try {
+    const results = await Promise.allSettled([
+      deleteOfflineSnapshot(),
+      caches.delete(OFFLINE_MEDIA_CACHE_NAME),
+    ]);
+    const failure = results.find(result => result.status === 'rejected');
+    if (failure) throw failure.reason;
+    try {
+      localStorage.removeItem(OFFLINE_META_STORAGE_KEY);
+    } catch (err) {
+      throw new Error('オフライン保存状態を削除できませんでした', { cause: err });
+    }
+    offlineMeta = null;
+    finalMessage = 'オフラインデータは未保存です。';
+    showStatus('オフラインデータを削除しました', 4000);
+  } catch (err) {
+    console.error('[RSS Offline] オフラインデータを削除できませんでした', err);
+    finalMessage = `削除に失敗しました: ${err.message || '原因不明'}`;
+  } finally {
+    offlinePreparing = false;
+    renderOfflineStatus(finalMessage);
   }
 }
 
@@ -6744,6 +7415,7 @@ function showDetail(index) {
 
   if (sanitized) {
     originalContent.innerHTML = sanitized;
+    normalizeArticleMediaUrls(originalContent, article);
   } else {
     originalContent.replaceChildren();
     const p = document.createElement('p');
@@ -7617,6 +8289,14 @@ window.addEventListener('resize', restoreMobileDetailNavPosition);
   // 記事キャッシュを IndexedDB（なければ localStorage）から読み込む
   await loadTranslationCache();
   allArticles = await loadStoredArticles();
+  const offlineSnapshot = await loadOfflineSnapshot();
+  await restoreOfflineMetaFromSnapshot(offlineSnapshot);
+  if (navigator.onLine === false || allArticles.length === 0) {
+    if (offlineSnapshot) {
+      allArticles = mergeOfflineSnapshotArticles(allArticles, offlineSnapshot.articles);
+    }
+  }
+  renderOfflineStatus();
 
   // オフライン対応の Service Worker（http/https のみ。file:// では登録しない）
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
@@ -8087,6 +8767,23 @@ document.getElementById('opml-import-input').addEventListener('change', e => {
   reader.readAsText(file);
 });
 
+document.getElementById('offline-save-btn').addEventListener('click', () => {
+  prepareOfflineData().catch(err => {
+    console.error('[RSS Offline] 保存処理で予期しないエラーが発生しました', err);
+    offlinePreparing = false;
+    renderOfflineStatus(`保存に失敗しました: ${err.message || '原因不明'}`);
+  });
+});
+document.getElementById('offline-delete-btn').addEventListener('click', () => {
+  clearOfflineData().catch(err => {
+    console.error('[RSS Offline] 削除処理で予期しないエラーが発生しました', err);
+    offlinePreparing = false;
+    renderOfflineStatus(`削除に失敗しました: ${err.message || '原因不明'}`);
+  });
+});
+window.addEventListener('online', () => { if (!offlinePreparing) renderOfflineStatus(); });
+window.addEventListener('offline', () => { if (!offlinePreparing) renderOfflineStatus(); });
+
 // Settings modal
 document.getElementById('settings-btn').addEventListener('click', () => {
   document.getElementById('rss-custom-proxy-input').value = customProxyUrl;
@@ -8097,6 +8794,7 @@ document.getElementById('settings-btn').addEventListener('click', () => {
   document.getElementById('rss-cloud-qr-box').hidden = true;
   document.getElementById('rss-cloud-qr-btn').disabled = !hasCloudConfig();
   document.getElementById('rss-cloud-copy-link-btn').disabled = !hasCloudConfig();
+  renderOfflineStatus();
   document.getElementById('rss-settings-overlay').style.display = 'flex';
 });
 document.getElementById('rss-settings-close-btn').addEventListener('click', () => {
