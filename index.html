@@ -797,7 +797,7 @@
 
     #pull-refresh-indicator.refreshing {
       opacity: 1;
-      transform: translate3d(0, -6px, 0);
+      transform: translate3d(0, var(--pull-offset), 0);
       transition: opacity 0.1s ease, transform 0.12s ease-out;
     }
 
@@ -1065,7 +1065,7 @@
     #main.tile-mode #article-list {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      padding: 8px;
+      padding: 18px 8px 8px;
       gap: 8px;
       align-content: start;
     }
@@ -2700,7 +2700,7 @@
         display: grid;
         grid-template-columns: 1fr;
         gap: 2px;
-        padding: 8px 0 24px;
+        padding: 18px 0 24px;
         align-content: start;
       }
       #main.tile-mode .article-item,
@@ -3538,7 +3538,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-22.pull-refresh-polish';
+const APP_VERSION = '2026-07-22.pull-refresh-clip-fix';
 const DEFAULT_PROFILE_ID = 'default';
 const FOLDER_NAME_MAX = 30;
 const CONFIG_HASH_PREFIX = '#rss-config=';
@@ -7468,11 +7468,13 @@ function setPullRefreshIndicator(state, distance = 0) {
     if (!indicator) return;
     const visual = pendingPullRefreshVisual;
     const active = visual.state !== 'idle';
-    const threshold = isMobileViewport() ? PULL_REFRESH_THRESHOLD : DESKTOP_PULL_REFRESH_THRESHOLD;
+    const mobileViewport = isMobileViewport();
+    const threshold = mobileViewport ? PULL_REFRESH_THRESHOLD : DESKTOP_PULL_REFRESH_THRESHOLD;
     const progress = visual.state === 'refreshing'
       ? 1
       : Math.min(1, visual.distance / threshold);
-    const offset = -24 + (progress * 18);
+    const endOffset = mobileViewport ? 2 : -6;
+    const offset = -24 + (progress * (endOffset + 24));
     indicator.style.setProperty('--pull-offset', `${offset.toFixed(2)}px`);
     indicator.style.setProperty('--pull-rotation', `${Math.round(progress * 180)}deg`);
     indicator.classList.toggle('visible', active);
