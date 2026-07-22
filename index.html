@@ -707,10 +707,11 @@
 
     #article-list {
       flex: 1;
+      position: relative;
       overflow-y: auto;
       overscroll-behavior: contain;
       min-height: 0;
-      padding: 6px 0;
+      padding: 10px 0;
     }
 
     #article-list.is-pulling,
@@ -727,86 +728,125 @@
     }
 
     #pull-refresh-indicator {
-      display: none;
-      overflow: hidden;
-      opacity: 0;
+      --pull-offset: -24px;
+      --pull-rotation: 0deg;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 4;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
       height: 0;
+      overflow: visible;
+      opacity: 0;
       margin: 0;
       padding: 0;
       border: 0;
       background: transparent;
-      color: transparent;
-      font-size: 0;
+      color: #b9c8dc;
+      pointer-events: none;
+      transform: translate3d(0, var(--pull-offset), 0);
+      transition: opacity 0.1s ease, transform 0.14s ease-out;
+      will-change: transform, opacity;
       user-select: none;
       -webkit-user-select: none;
     }
 
     #pull-refresh-indicator.visible {
-      display: none;
+      opacity: 1;
+      transition: opacity 0.08s ease, transform 0s;
+    }
+
+    #pull-refresh-indicator::before {
+      content: "";
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border: 1px solid rgba(145, 169, 199, 0.35);
+      border-radius: 50%;
+      background: rgba(22, 33, 62, 0.94);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.24);
+    }
+
+    #pull-refresh-indicator::after {
+      content: "\2193";
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+      transform: rotate(var(--pull-rotation));
+      transform-origin: center;
     }
 
     #pull-refresh-indicator.ready {
-      color: transparent;
+      color: #fff;
+    }
+
+    #pull-refresh-indicator.ready::before,
+    #pull-refresh-indicator.refreshing::before {
+      border-color: rgba(233, 69, 96, 0.72);
+      background: #e94560;
+      box-shadow: 0 4px 16px rgba(233, 69, 96, 0.3);
+    }
+
+    #pull-refresh-indicator.refreshing {
+      opacity: 1;
+      transform: translate3d(0, -6px, 0);
+      transition: opacity 0.1s ease, transform 0.12s ease-out;
+    }
+
+    #pull-refresh-indicator.refreshing::after {
+      content: "";
+      width: 11px;
+      height: 11px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: pull-refresh-spin 0.65s linear infinite;
     }
 
     body.light #pull-refresh-indicator {
-      background: var(--rss-panel-soft);
-      border-color: var(--rss-border);
       color: var(--rss-muted);
     }
 
-    body.light #pull-refresh-indicator.ready {
-      background: var(--rss-accent-soft);
-      border-color: var(--rss-accent);
-      color: var(--rss-accent);
+    body.light #pull-refresh-indicator::before {
+      border-color: var(--rss-border);
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 4px 14px rgba(40, 52, 72, 0.16);
     }
 
-    @media (min-width: 761px) {
-      #main:not(.tile-mode) #pull-refresh-indicator {
-        --pull-refresh-height: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 0;
-        opacity: 0;
-        transition: height 0.14s ease, opacity 0.14s ease;
-      }
+    body.light #pull-refresh-indicator.ready,
+    body.light #pull-refresh-indicator.refreshing {
+      color: #fff;
+    }
 
-      #main:not(.tile-mode) #pull-refresh-indicator.visible {
-        display: flex;
-        height: var(--pull-refresh-height);
-        opacity: 1;
-      }
+    body.light #pull-refresh-indicator.ready::before,
+    body.light #pull-refresh-indicator.refreshing::before {
+      border-color: var(--rss-accent);
+      background: var(--rss-accent);
+      box-shadow: 0 4px 14px rgba(107, 127, 174, 0.28);
+    }
 
-      #main:not(.tile-mode) #pull-refresh-indicator::before {
-        content: "";
-        display: block;
-        width: 44px;
-        height: 4px;
-        border-radius: 999px;
-        background: #5b7fb4;
-        opacity: 0.82;
-        transform: translateY(-1px);
-        transition: width 0.14s ease, height 0.14s ease, background 0.14s ease, opacity 0.14s ease, box-shadow 0.14s ease;
-      }
+    @keyframes pull-refresh-spin {
+      to { transform: rotate(360deg); }
+    }
 
-      #main:not(.tile-mode) #pull-refresh-indicator.ready::before,
-      #main:not(.tile-mode) #pull-refresh-indicator.refreshing::before {
-        width: 64px;
-        height: 5px;
-        background: #e94560;
-        opacity: 1;
-        box-shadow: 0 0 14px rgba(233, 69, 96, 0.36);
+    @media (prefers-reduced-motion: reduce) {
+      #pull-refresh-indicator,
+      #pull-refresh-indicator.visible,
+      #pull-refresh-indicator.refreshing {
+        transition: none;
       }
-
-      body.light #main:not(.tile-mode) #pull-refresh-indicator::before {
-        background: var(--rss-muted);
-      }
-
-      body.light #main:not(.tile-mode) #pull-refresh-indicator.ready::before,
-      body.light #main:not(.tile-mode) #pull-refresh-indicator.refreshing::before {
-        background: var(--rss-accent);
-        box-shadow: 0 0 12px rgba(107, 127, 174, 0.3);
+      #pull-refresh-indicator.refreshing::after {
+        animation: none;
+        border-top-color: currentColor;
+        opacity: 0.72;
       }
     }
 
@@ -1113,53 +1153,6 @@
       }
       #main.tile-mode .article-item .article-meta {
         font-size: 11px;
-      }
-      #main.tile-mode #pull-refresh-indicator {
-        --pull-refresh-height: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        grid-column: 1 / -1;
-        height: 0;
-        opacity: 0;
-        transition: height 0.14s ease, opacity 0.14s ease;
-      }
-
-      #main.tile-mode #pull-refresh-indicator.visible {
-        display: flex;
-        height: var(--pull-refresh-height);
-        opacity: 1;
-      }
-
-      #main.tile-mode #pull-refresh-indicator::before {
-        content: "";
-        display: block;
-        width: 44px;
-        height: 4px;
-        border-radius: 999px;
-        background: #5b7fb4;
-        opacity: 0.82;
-        transform: translateY(-1px);
-        transition: width 0.14s ease, height 0.14s ease, background 0.14s ease, opacity 0.14s ease, box-shadow 0.14s ease;
-      }
-
-      #main.tile-mode #pull-refresh-indicator.ready::before,
-      #main.tile-mode #pull-refresh-indicator.refreshing::before {
-        width: 64px;
-        height: 5px;
-        background: #e94560;
-        opacity: 1;
-        box-shadow: 0 0 14px rgba(233, 69, 96, 0.36);
-      }
-
-      body.light #main.tile-mode #pull-refresh-indicator::before {
-        background: var(--rss-muted);
-      }
-
-      body.light #main.tile-mode #pull-refresh-indicator.ready::before,
-      body.light #main.tile-mode #pull-refresh-indicator.refreshing::before {
-        background: var(--rss-accent);
-        box-shadow: 0 0 12px rgba(107, 127, 174, 0.3);
       }
     }
 
@@ -2707,57 +2700,8 @@
         display: grid;
         grid-template-columns: 1fr;
         gap: 2px;
-        padding: 2px 0 24px;
+        padding: 8px 0 24px;
         align-content: start;
-      }
-      #pull-refresh-indicator {
-        --pull-refresh-height: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        grid-column: 1 / -1;
-        height: 0;
-        margin: 0;
-        opacity: 0;
-        transition: height 0.16s ease, opacity 0.16s ease;
-      }
-      #article-list.at-scroll-top #pull-refresh-indicator,
-      #pull-refresh-indicator.visible {
-        display: flex;
-        height: var(--pull-refresh-height);
-        opacity: 1;
-      }
-      #pull-refresh-indicator::before {
-        content: "";
-        display: block;
-        width: 34px;
-        height: 3px;
-        border-radius: 999px;
-        background: #2b4f76;
-        opacity: 0.82;
-        transition: width 0.16s ease, background 0.16s ease, opacity 0.16s ease, box-shadow 0.16s ease;
-      }
-      #pull-refresh-indicator.visible::before {
-        width: 42px;
-        background: #5b7fb4;
-        opacity: 1;
-      }
-      #pull-refresh-indicator.ready::before,
-      #pull-refresh-indicator.refreshing::before {
-        width: 48px;
-        background: #e94560;
-        box-shadow: 0 0 12px rgba(233, 69, 96, 0.34);
-      }
-      body.light #pull-refresh-indicator::before {
-        background: var(--rss-border);
-      }
-      body.light #pull-refresh-indicator.visible::before {
-        background: var(--rss-muted);
-      }
-      body.light #pull-refresh-indicator.ready::before,
-      body.light #pull-refresh-indicator.refreshing::before {
-        background: var(--rss-accent);
-        box-shadow: 0 0 10px rgba(107, 127, 174, 0.28);
       }
       #main.tile-mode .article-item,
       .article-item {
@@ -3594,7 +3538,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-22.offline-download';
+const APP_VERSION = '2026-07-22.pull-refresh-polish';
 const DEFAULT_PROFILE_ID = 'default';
 const FOLDER_NAME_MAX = 30;
 const CONFIG_HASH_PREFIX = '#rss-config=';
@@ -7196,7 +7140,6 @@ function renderArticleList() {
   pullIndicator.setAttribute('aria-hidden', 'true');
   pullIndicator.textContent = '';
   list.appendChild(pullIndicator);
-  updateArticleListTopState();
 
   filteredArticles.forEach((article, index) => {
     const div = document.createElement('div');
@@ -7493,10 +7436,13 @@ const MOBILE_DETAIL_NAV_POSITION_KEY = 'rss-mobile-detail-nav-position';
 const MOBILE_DETAIL_NAV_MARGIN = 8;
 const MOBILE_DETAIL_SWIPE_EDGE_WIDTH = 24;
 const MOBILE_DETAIL_SWIPE_BACK_DISTANCE = 72;
-const PULL_REFRESH_THRESHOLD = 220;
+const PULL_REFRESH_THRESHOLD = 72;
+const PULL_REFRESH_ACTIVATION_DISTANCE = 7;
 const DESKTOP_PULL_REFRESH_THRESHOLD = 48;
-const PULL_REFRESH_WHEEL_IDLE_MS = 160;
+const PULL_REFRESH_WHEEL_IDLE_MS = 120;
 let suppressNextArticleClick = false;
+let pullRefreshVisualFrame = 0;
+let pendingPullRefreshVisual = { state: 'idle', distance: 0 };
 
 function isMobileViewport() {
   return window.matchMedia('(max-width: 760px)').matches;
@@ -7513,32 +7459,27 @@ function canPullRefreshArticleList(options = {}) {
     && list.scrollTop <= 0;
 }
 
-function updateArticleListTopState() {
-  const list = document.getElementById('article-list');
-  if (!list) return;
-  const canShowTopMark = isMobileViewport()
-    && selectedFeedUrl === null
-    && !document.body.classList.contains('mobile-detail-open')
-    && list.scrollTop <= 1;
-  list.classList.toggle('at-scroll-top', canShowTopMark);
-}
-
 function setPullRefreshIndicator(state, distance = 0) {
-  const indicator = document.getElementById('pull-refresh-indicator');
-  if (!indicator) return;
-  const active = state !== 'idle';
-  const isDesktopPullIndicator = !isMobileViewport();
-  const height = active
-    ? (isDesktopPullIndicator
-        ? (state === 'refreshing' ? 52 : Math.max(16, Math.min(64, Math.round(distance * 0.9))))
-        : Math.max(12, Math.min(44, Math.round(distance * 0.32))))
-    : (isDesktopPullIndicator ? 16 : 12);
-  indicator.style.setProperty('--pull-refresh-height', `${height}px`);
-  indicator.classList.toggle('visible', active);
-  indicator.classList.toggle('ready', state === 'ready');
-  indicator.classList.toggle('refreshing', state === 'refreshing');
-  indicator.textContent = '';
-  updateArticleListTopState();
+  pendingPullRefreshVisual = { state, distance: Math.max(0, distance) };
+  if (pullRefreshVisualFrame) return;
+  pullRefreshVisualFrame = window.requestAnimationFrame(() => {
+    pullRefreshVisualFrame = 0;
+    const indicator = document.getElementById('pull-refresh-indicator');
+    if (!indicator) return;
+    const visual = pendingPullRefreshVisual;
+    const active = visual.state !== 'idle';
+    const threshold = isMobileViewport() ? PULL_REFRESH_THRESHOLD : DESKTOP_PULL_REFRESH_THRESHOLD;
+    const progress = visual.state === 'refreshing'
+      ? 1
+      : Math.min(1, visual.distance / threshold);
+    const offset = -24 + (progress * 18);
+    indicator.style.setProperty('--pull-offset', `${offset.toFixed(2)}px`);
+    indicator.style.setProperty('--pull-rotation', `${Math.round(progress * 180)}deg`);
+    indicator.classList.toggle('visible', active);
+    indicator.classList.toggle('ready', visual.state === 'ready');
+    indicator.classList.toggle('refreshing', visual.state === 'refreshing');
+    indicator.textContent = '';
+  });
 }
 
 function shouldIgnorePullStartTarget(target) {
@@ -7547,8 +7488,11 @@ function shouldIgnorePullStartTarget(target) {
 
 async function runPullRefreshFromGesture() {
   setPullRefreshIndicator('refreshing');
-  await refreshAll();
-  setPullRefreshIndicator('idle');
+  try {
+    await refreshAll();
+  } finally {
+    setPullRefreshIndicator('idle');
+  }
 }
 
 function initMobilePullToRefresh() {
@@ -7556,12 +7500,14 @@ function initMobilePullToRefresh() {
   if (!list) return;
 
   let tracking = false;
+  let startX = 0;
   let startY = 0;
   let pullDistance = 0;
 
   list.addEventListener('touchstart', e => {
     if (e.touches.length !== 1 || !canPullRefreshArticleList({ mobileOnly: true })) return;
     tracking = true;
+    startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     pullDistance = 0;
   }, { passive: true });
@@ -7573,21 +7519,32 @@ function initMobilePullToRefresh() {
       setPullRefreshIndicator('idle');
       return;
     }
-    const dy = e.touches[0].clientY - startY;
+    const touch = e.touches[0];
+    const dy = touch.clientY - startY;
+    const dx = Math.abs(touch.clientX - startX);
+    if (dx > Math.max(PULL_REFRESH_ACTIVATION_DISTANCE, dy)) {
+      tracking = false;
+      pullDistance = 0;
+      setPullRefreshIndicator('idle');
+      return;
+    }
     if (dy <= 0) {
       pullDistance = 0;
       setPullRefreshIndicator('idle');
       return;
     }
     pullDistance = dy;
-    setPullRefreshIndicator(dy >= PULL_REFRESH_THRESHOLD ? 'ready' : 'pulling', dy);
-    if (dy > 12) e.preventDefault();
+    if (dy >= PULL_REFRESH_ACTIVATION_DISTANCE) {
+      setPullRefreshIndicator(dy >= PULL_REFRESH_THRESHOLD ? 'ready' : 'pulling', dy);
+      e.preventDefault();
+    }
   }, { passive: false });
 
   const finishPull = async () => {
     if (!tracking) return;
     const shouldRefresh = pullDistance >= PULL_REFRESH_THRESHOLD && canPullRefreshArticleList({ mobileOnly: true });
     tracking = false;
+    pullDistance = 0;
     if (!shouldRefresh) {
       setPullRefreshIndicator('idle');
       return;
@@ -7601,9 +7558,6 @@ function initMobilePullToRefresh() {
     pullDistance = 0;
     setPullRefreshIndicator('idle');
   });
-  list.addEventListener('scroll', updateArticleListTopState, { passive: true });
-  window.addEventListener('resize', updateArticleListTopState);
-  updateArticleListTopState();
 }
 
 function initDesktopPullToRefresh() {
