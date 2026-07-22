@@ -172,8 +172,7 @@
 
     #mobile-feed-input-toggle,
     #mobile-feed-filter-toggle,
-    #mobile-pin-toggle,
-    #mobile-feed-filter-wrapper {
+    #mobile-pin-toggle {
       display: none;
     }
 
@@ -514,12 +513,16 @@
       flex-wrap: wrap;
     }
 
-    #feed-filter-select {
+    .feed-filter-dropdown {
+      position: relative;
+      min-width: 0;
+    }
+    #feed-filter-button {
       width: 176px;
       min-width: 112px;
       max-width: min(22vw, 176px);
       height: 28px;
-      padding: 0 30px 0 9px;
+      padding: 0 8px 0 9px;
       border: 1px solid #0f3460;
       border-radius: 4px;
       background: #16213e;
@@ -527,22 +530,124 @@
       font: 11px "Helvetica Neue", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       text-transform: none;
       outline: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
-    #feed-filter-select:hover,
-    #feed-filter-select:focus {
+    #feed-filter-button:hover,
+    #feed-filter-button:focus,
+    #feed-filter-button[aria-expanded="true"] {
       border-color: #e94560;
       background: #0f3460;
     }
-    #feed-filter-select option.feed-filter-primary {
-      font-weight: 700;
+    .feed-filter-trigger-label {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: left;
     }
-    #feed-filter-select option.feed-filter-separator {
-      color: #68758c;
+    .feed-filter-caret {
+      color: #8795aa;
+      font-size: 9px;
+      flex-shrink: 0;
+      transition: transform 0.15s ease;
+    }
+    #feed-filter-button[aria-expanded="true"] .feed-filter-caret { transform: rotate(180deg); }
+    #feed-filter-menu {
+      position: fixed;
+      inset: auto;
+      z-index: 5000;
+      margin: 0;
+      padding: 6px;
+      border: 1px solid #29476f;
+      border-radius: 8px;
+      background: #101d36;
+      color: #e0e0e0;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+      max-height: min(60vh, 480px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      font: 12px "Helvetica Neue", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    #feed-filter-menu:popover-open { display: block; }
+    #feed-filter-menu::backdrop { background: transparent; }
+    .feed-filter-option,
+    .feed-filter-folder-toggle {
+      border: 0;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+    .feed-filter-option {
+      width: 100%;
+      min-height: 34px;
+      padding: 7px 9px;
+      border-radius: 5px;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      text-align: left;
+    }
+    .feed-filter-option:hover,
+    .feed-filter-option:focus-visible,
+    .feed-filter-folder-toggle:hover,
+    .feed-filter-folder-toggle:focus-visible {
+      background: #172f55;
+      color: #fff;
+    }
+    .feed-filter-option[aria-checked="true"] {
+      background: rgba(233, 69, 96, 0.16);
+      color: #fff;
+      box-shadow: inset 3px 0 0 #e94560;
+    }
+    .feed-filter-primary { font-weight: 700; }
+    .feed-filter-folder-row {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      align-items: stretch;
+    }
+    .feed-filter-folder-toggle {
+      min-width: 34px;
+      min-height: 34px;
+      padding: 0;
+      border-radius: 5px;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .feed-filter-folder-option {
+      font-weight: 700;
+      padding-left: 5px;
+    }
+    .feed-filter-folder-children[hidden] { display: none; }
+    .feed-filter-folder-children .feed-filter-option { padding-left: 42px; }
+    .feed-filter-option-label {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .feed-filter-option-count {
+      color: #8290a6;
       font-size: 10px;
-      font-weight: 400;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
-    #feed-filter-select option.feed-filter-folder {
-      font-weight: 700;
+    .feed-filter-separator {
+      height: 1px;
+      margin: 5px 7px;
+      background: #263a59;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .feed-filter-caret { transition: none; }
     }
 
     #article-list {
@@ -1831,11 +1936,26 @@
       border-color: var(--rss-accent);
       color: var(--rss-text);
     }
-    body.light #mobile-feed-filter-select {
-      background: var(--rss-bg);
+    body.light #feed-filter-menu {
+      background: var(--rss-panel);
       border-color: var(--rss-border);
       color: var(--rss-text);
+      box-shadow: 0 14px 30px rgba(42,39,35,0.2);
     }
+    body.light .feed-filter-option:hover,
+    body.light .feed-filter-option:focus-visible,
+    body.light .feed-filter-folder-toggle:hover,
+    body.light .feed-filter-folder-toggle:focus-visible {
+      background: var(--rss-panel-soft);
+      color: var(--rss-text);
+    }
+    body.light .feed-filter-option[aria-checked="true"] {
+      background: var(--rss-accent-soft);
+      color: var(--rss-text);
+      box-shadow: inset 3px 0 0 var(--rss-accent);
+    }
+    body.light .feed-filter-option-count { color: var(--rss-muted); }
+    body.light .feed-filter-separator { background: var(--rss-border); }
     body.light #add-btn:disabled { background: transparent; border-color: var(--rss-border); color: var(--rss-muted); }
     body.light :is(button, a)[data-tooltip]::after {
       background: color-mix(in srgb, var(--rss-text) 92%, var(--rss-bg));
@@ -1926,17 +2046,18 @@
     body.light #article-list-panel { background: var(--rss-panel); border-right: none; }
     body.light #article-list-header { color: var(--rss-muted); border-bottom: none; background: var(--rss-panel); }
     body.light #article-count { color: var(--rss-muted); }
-    body.light #feed-filter-select {
+    body.light #feed-filter-button {
       background: var(--rss-bg);
       border-color: var(--rss-border);
       color: var(--rss-text);
     }
-    body.light #feed-filter-select:hover,
-    body.light #feed-filter-select:focus {
+    body.light #feed-filter-button:hover,
+    body.light #feed-filter-button:focus,
+    body.light #feed-filter-button[aria-expanded="true"] {
       border-color: var(--rss-accent);
       background: var(--rss-panel-soft);
     }
-    body.light #feed-filter-select option.feed-filter-separator { color: var(--rss-muted); }
+    body.light .feed-filter-caret { color: var(--rss-muted); }
     body.light .new-badge { background: #5c73aa; color: #fff; }
     body.light .article-item { border: 0; }
     body.light .article-item:hover { background: var(--rss-panel-soft); }
@@ -2407,24 +2528,6 @@
       body.mobile-feed-input-open #feed-input-wrapper {
         display: block;
       }
-      #mobile-feed-filter-wrapper {
-        order: 7;
-        flex-basis: 100%;
-        min-width: 0;
-        display: none;
-      }
-      body.mobile-feed-filter-open #mobile-feed-filter-wrapper {
-        display: block;
-      }
-      #mobile-feed-filter-select {
-        width: 100%;
-        background: #0f3460;
-        border: 1px solid #1a4a8a;
-        border-radius: 6px;
-        color: #e0e0e0;
-        font-size: 14px;
-        padding: 10px 12px;
-      }
       #settings-btn,
       #mobile-feed-input-toggle,
       #mobile-feed-filter-toggle,
@@ -2508,10 +2611,19 @@
       #article-list-header {
         display: none;
       }
-      #feed-filter-select {
+      #feed-filter-button {
         max-width: 52vw;
         font-size: 13px;
       }
+      #feed-filter-menu {
+        max-height: calc(100dvh - 86px);
+        font-size: 14px;
+      }
+      .feed-filter-option,
+      .feed-filter-folder-toggle { min-height: 44px; }
+      .feed-filter-folder-row { grid-template-columns: 44px minmax(0, 1fr); }
+      .feed-filter-folder-toggle { min-width: 44px; font-size: 18px; }
+      .feed-filter-folder-children .feed-filter-option { padding-left: 52px; }
       #article-list { padding-bottom: 24px; }
       #view-toggle-btn { display: none !important; }
       #article-list {
@@ -3046,12 +3158,9 @@
   <button id="save-btn" data-tooltip="フィード設定を書き出す" aria-label="フィード設定をJSONファイルに保存">export</button>
   <button id="load-btn" data-tooltip="フィード設定を読み込む" aria-label="JSONファイルからフィード設定を読み込む">import</button>
   <button id="mobile-pin-toggle" data-tooltip="ピン記事はありません" data-tooltip-align="right" aria-label="ピン記事はありません">📍</button>
-  <button id="mobile-feed-filter-toggle" data-tooltip="Feed" data-tooltip-align="right" aria-label="フィード選択を開く" aria-expanded="false">Feed</button>
+  <button id="mobile-feed-filter-toggle" data-tooltip="Feed" data-tooltip-align="right" aria-label="フィード選択を開く" aria-haspopup="menu" aria-controls="feed-filter-menu" aria-expanded="false">Feed</button>
   <button id="mobile-feed-input-toggle" data-tooltip="URL入力" data-tooltip-align="right" aria-label="RSSフィードURL入力欄を開く" aria-expanded="false">URL</button>
   <button id="settings-btn" data-tooltip="設定" data-tooltip-align="right" aria-label="設定">⚙</button>
-  <div id="mobile-feed-filter-wrapper">
-    <select id="mobile-feed-filter-select" aria-label="フィードで絞り込み"></select>
-  </div>
   <input id="load-input" type="file" accept=".json" style="display:none">
 </div>
 
@@ -3066,9 +3175,12 @@
     <div id="article-list-header">
       <span class="article-list-heading">
         <span>記事</span>
-        <select id="feed-filter-select" aria-label="フィードで絞り込み">
-          <option value="__all__">すべてのフィード</option>
-        </select>
+        <span class="feed-filter-dropdown">
+          <button id="feed-filter-button" type="button" aria-label="フィードで絞り込み" aria-haspopup="menu" aria-controls="feed-filter-menu" aria-expanded="false">
+            <span id="feed-filter-button-label" class="feed-filter-trigger-label">すべてのフィード</span>
+            <span class="feed-filter-caret" aria-hidden="true">▼</span>
+          </button>
+        </span>
       </span>
       <div style="display:flex;align-items:center;gap:6px;">
         <span id="article-count"></span>
@@ -3172,6 +3284,7 @@
   <button id="theme-btn" data-tooltip="テーマ" data-tooltip-pos="top" data-tooltip-align="right" aria-label="ライト/ダークモード切替"></button>
 </div>
 
+<div id="feed-filter-menu" popover="manual" role="menu" aria-label="フィードで絞り込み"></div>
 <div id="status" role="status" aria-live="polite"></div>
 <div id="mobile-pin-modal-overlay" aria-hidden="true">
   <div id="mobile-pin-modal" role="dialog" aria-modal="true" aria-labelledby="mobile-pin-modal-title">
@@ -3396,7 +3509,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-22.folder-init-fix';
+const APP_VERSION = '2026-07-22.collapsible-folders';
 const DEFAULT_PROFILE_ID = 'default';
 const FOLDER_NAME_MAX = 30;
 const CONFIG_HASH_PREFIX = '#rss-config=';
@@ -4735,8 +4848,9 @@ let currentIndex = -1;
 // フィードのフォルダ分け
 // selectedFeedUrl 用の接頭辞（フィードURLは http(s) 始まりのため衝突しない）
 const FOLDER_STATE_PREFIX = 'FOLDER:';
-// <select> の option 値用の接頭辞
+// フィード選択メニューの値用の接頭辞
 const FOLDER_SELECT_PREFIX = '__folder__:';
+const COLLAPSED_FEED_FOLDERS_KEY = 'rss-collapsed-feed-folders';
 
 function normalizeFolderName(value) {
   return typeof value === 'string' ? value.trim().slice(0, FOLDER_NAME_MAX) : '';
@@ -4756,6 +4870,26 @@ function selectedFolderName() {
 
 function getFolderFeeds(folderName) {
   return feeds.filter(f => getFeedFolder(f) === folderName);
+}
+
+let collapsedFeedFolders = (() => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(COLLAPSED_FEED_FOLDERS_KEY) || '[]');
+    if (!Array.isArray(stored)) return new Set();
+    return new Set(stored.map(normalizeFolderName).filter(Boolean));
+  } catch (err) {
+    console.warn('フォルダの開閉状態を読み込めませんでした', err);
+    return new Set();
+  }
+})();
+let feedFilterMenuTrigger = null;
+
+function saveCollapsedFeedFolders() {
+  try {
+    localStorage.setItem(COLLAPSED_FEED_FOLDERS_KEY, JSON.stringify([...collapsedFeedFolders]));
+  } catch (err) {
+    console.warn('フォルダの開閉状態を保存できませんでした', err);
+  }
 }
 
 // ピン: 記事URLのSet（localStorageで永続化）
@@ -5267,12 +5401,7 @@ function toggleSave(index) {
 }
 
 function updateReadLaterBtn() {
-  ['feed-filter-select', 'mobile-feed-filter-select'].forEach(id => {
-    const select = document.getElementById(id);
-    if (!select) return;
-    const option = select.querySelector('option[value="__read_later__"]');
-    if (option) option.textContent = `Read It Later (${savedArticles.length})`;
-  });
+  renderFeedSelect();
 }
 
 const COLORS = ['#e94560','#5b9bd5','#50c878','#f5a623','#a78bfa','#34d399','#fb923c','#38bdf8'];
@@ -6045,34 +6174,50 @@ function getUnreadCountByFeed() {
   return counts;
 }
 
-function renderFeedSelect() {
-  const select = document.getElementById('feed-filter-select');
-  if (!select) return;
-  const currentValue = selectedFeedToSelectValue();
-  select.innerHTML = '';
+function createFeedFilterOption(value, label, countText = '', className = '') {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `feed-filter-option${className ? ` ${className}` : ''}`;
+  button.dataset.feedValue = value;
+  button.setAttribute('role', 'menuitemradio');
+  button.setAttribute('aria-checked', selectedFeedToSelectValue() === value ? 'true' : 'false');
+  const labelEl = document.createElement('span');
+  labelEl.className = 'feed-filter-option-label';
+  labelEl.textContent = label;
+  button.appendChild(labelEl);
+  if (countText) {
+    const countEl = document.createElement('span');
+    countEl.className = 'feed-filter-option-count';
+    countEl.textContent = countText;
+    button.appendChild(countEl);
+  }
+  return button;
+}
 
+function appendFeedFilterSeparator(fragment) {
+  const separator = document.createElement('div');
+  separator.className = 'feed-filter-separator';
+  separator.setAttribute('role', 'separator');
+  fragment.appendChild(separator);
+}
+
+function setFeedFilterButtonLabel(label) {
+  const labelEl = document.getElementById('feed-filter-button-label');
+  if (labelEl) labelEl.textContent = label;
+  const desktopButton = document.getElementById('feed-filter-button');
+  if (desktopButton) desktopButton.setAttribute('aria-label', `フィードで絞り込み（現在: ${label}）`);
+  const mobileButton = document.getElementById('mobile-feed-filter-toggle');
+  if (mobileButton && feedFilterMenuTrigger !== mobileButton) {
+    mobileButton.setAttribute('aria-label', `フィード選択を開く（現在: ${label}）`);
+  }
+}
+
+function renderFeedSelect() {
+  const menu = document.getElementById('feed-filter-menu');
+  if (!menu) return;
   const unreadCounts = getUnreadCountByFeed();
   const totalUnread = [...unreadCounts.values()].reduce((sum, n) => sum + n, 0);
   const unreadSuffix = n => n > 0 ? ` (${n})` : '';
-
-  const allOption = document.createElement('option');
-  allOption.value = '__all__';
-  allOption.textContent = `すべてのフィード${unreadSuffix(totalUnread)}`;
-  allOption.className = 'feed-filter-primary';
-  select.appendChild(allOption);
-
-  const readLaterOption = document.createElement('option');
-  readLaterOption.value = '__read_later__';
-  readLaterOption.textContent = `Read It Later (${savedArticles.length})`;
-  readLaterOption.className = 'feed-filter-primary';
-  select.appendChild(readLaterOption);
-
-  const separatorOption = document.createElement('option');
-  separatorOption.value = '__separator__';
-  separatorOption.textContent = '────────────';
-  separatorOption.disabled = true;
-  separatorOption.className = 'feed-filter-separator';
-  select.appendChild(separatorOption);
 
   // フォルダごとにグループ化（フォルダ順・フォルダ内順とも最新記事日時順）
   const folderOrder = [];
@@ -6088,47 +6233,188 @@ function renderFeedSelect() {
     feedsByFolder.get(folderName).push(feed);
   });
 
-  const appendFeedOption = (feed, indent) => {
-    const option = document.createElement('option');
-    option.value = feed.url;
+  let collapsedStateChanged = false;
+  const existingFolders = new Set(folderOrder);
+  collapsedFeedFolders.forEach(folderName => {
+    if (existingFolders.has(folderName)) return;
+    collapsedFeedFolders.delete(folderName);
+    collapsedStateChanged = true;
+  });
+  if (collapsedStateChanged) saveCollapsedFeedFolders();
+
+  const selectedFolder = selectedFolderName();
+  if (selectedFolder !== null && !feedsByFolder.has(selectedFolder)) selectedFeedUrl = null;
+  if (selectedFeedUrl && selectedFeedUrl !== 'READ_LATER' && !isFolderSelection(selectedFeedUrl)
+    && !feeds.some(feed => feed.url === selectedFeedUrl)) selectedFeedUrl = null;
+
+  const fragment = document.createDocumentFragment();
+  fragment.appendChild(createFeedFilterOption(
+    '__all__',
+    'すべてのフィード',
+    unreadSuffix(totalUnread),
+    'feed-filter-primary'
+  ));
+  fragment.appendChild(createFeedFilterOption(
+    '__read_later__',
+    'Read It Later',
+    `(${savedArticles.length})`,
+    'feed-filter-primary'
+  ));
+  appendFeedFilterSeparator(fragment);
+
+  const appendFeedOption = (parent, feed, nested) => {
     const warn = isFeedUnhealthy(feed.url) ? '⚠ ' : '';
-    option.textContent = (indent ? '　' : '') + warn + getFeedTitle(feed.url) + unreadSuffix(unreadCounts.get(feed.url) || 0);
-    select.appendChild(option);
+    const option = createFeedFilterOption(
+      feed.url,
+      warn + getFeedTitle(feed.url),
+      unreadSuffix(unreadCounts.get(feed.url) || 0),
+      nested ? 'feed-filter-nested' : ''
+    );
+    parent.appendChild(option);
   };
 
-  folderOrder.forEach(folderName => {
+  folderOrder.forEach((folderName, folderIndex) => {
     const folderFeeds = feedsByFolder.get(folderName);
     const folderUnread = folderFeeds.reduce((sum, feed) => sum + (unreadCounts.get(feed.url) || 0), 0);
-    const folderOption = document.createElement('option');
-    folderOption.value = FOLDER_SELECT_PREFIX + folderName;
-    folderOption.textContent = `📁 ${folderName} (${folderFeeds.length})${unreadSuffix(folderUnread)}`;
-    folderOption.className = 'feed-filter-folder';
-    select.appendChild(folderOption);
-    folderFeeds.forEach(feed => appendFeedOption(feed, true));
+    const isCollapsed = collapsedFeedFolders.has(folderName);
+    const childrenId = `feed-filter-folder-${folderIndex}`;
+    const row = document.createElement('div');
+    row.className = 'feed-filter-folder-row';
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'feed-filter-folder-toggle';
+    toggle.dataset.folderToggle = folderName;
+    toggle.setAttribute('role', 'menuitem');
+    toggle.setAttribute('aria-controls', childrenId);
+    toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+    toggle.setAttribute('aria-label', `${folderName}フォルダを${isCollapsed ? '開く' : '閉じる'}`);
+    toggle.textContent = isCollapsed ? '📁' : '📂';
+    row.appendChild(toggle);
+    row.appendChild(createFeedFilterOption(
+      FOLDER_SELECT_PREFIX + folderName,
+      folderName,
+      `(${folderFeeds.length})${unreadSuffix(folderUnread)}`,
+      'feed-filter-folder-option'
+    ));
+    fragment.appendChild(row);
+
+    const children = document.createElement('div');
+    children.id = childrenId;
+    children.className = 'feed-filter-folder-children';
+    children.setAttribute('role', 'group');
+    children.setAttribute('aria-label', `${folderName}フォルダ内のフィード`);
+    children.hidden = isCollapsed;
+    folderFeeds.forEach(feed => appendFeedOption(children, feed, true));
+    fragment.appendChild(children);
   });
 
   if (folderOrder.length > 0 && uncategorized.length > 0) {
-    const uncategorizedSeparator = document.createElement('option');
-    uncategorizedSeparator.value = '__separator2__';
-    uncategorizedSeparator.textContent = '────────────';
-    uncategorizedSeparator.disabled = true;
-    uncategorizedSeparator.className = 'feed-filter-separator';
-    select.appendChild(uncategorizedSeparator);
+    appendFeedFilterSeparator(fragment);
   }
 
-  uncategorized.forEach(feed => appendFeedOption(feed, false));
+  uncategorized.forEach(feed => appendFeedOption(fragment, feed, false));
+  menu.replaceChildren(fragment);
 
-  select.value = [...select.options].some(opt => opt.value === currentValue) ? currentValue : '__all__';
-  if (select.value === '__all__' && selectedFeedUrl && selectedFeedUrl !== 'READ_LATER') selectedFeedUrl = null;
-  renderMobileFeedSelect(select);
-  updateReadLaterBtn();
+  let selectedLabel = `すべてのフィード${unreadSuffix(totalUnread)}`;
+  if (selectedFeedUrl === 'READ_LATER') {
+    selectedLabel = `Read It Later (${savedArticles.length})`;
+  } else if (isFolderSelection(selectedFeedUrl)) {
+    const folderName = selectedFolderName();
+    const folderFeeds = feedsByFolder.get(folderName) || [];
+    const folderUnread = folderFeeds.reduce((sum, feed) => sum + (unreadCounts.get(feed.url) || 0), 0);
+    selectedLabel = `${collapsedFeedFolders.has(folderName) ? '📁' : '📂'} ${folderName} (${folderFeeds.length})${unreadSuffix(folderUnread)}`;
+  } else if (selectedFeedUrl) {
+    const warn = isFeedUnhealthy(selectedFeedUrl) ? '⚠ ' : '';
+    selectedLabel = warn + getFeedTitle(selectedFeedUrl) + unreadSuffix(unreadCounts.get(selectedFeedUrl) || 0);
+  }
+  setFeedFilterButtonLabel(selectedLabel);
+  if (feedFilterMenuTrigger) positionFeedFilterMenu(feedFilterMenuTrigger);
 }
 
-function renderMobileFeedSelect(sourceSelect = document.getElementById('feed-filter-select')) {
-  const mobileSelect = document.getElementById('mobile-feed-filter-select');
-  if (!sourceSelect || !mobileSelect) return;
-  mobileSelect.innerHTML = sourceSelect.innerHTML;
-  mobileSelect.value = sourceSelect.value;
+function positionFeedFilterMenu(trigger) {
+  const menu = document.getElementById('feed-filter-menu');
+  if (!menu || !trigger || !feedFilterMenuTrigger) return;
+  const edge = 10;
+  const rect = trigger.getBoundingClientRect();
+  const isMobile = trigger.id === 'mobile-feed-filter-toggle';
+  const width = Math.min(window.innerWidth - edge * 2, isMobile ? window.innerWidth - edge * 2 : Math.max(280, rect.width));
+  menu.style.width = `${width}px`;
+  const left = Math.max(edge, Math.min(rect.left, window.innerWidth - width - edge));
+  const menuHeight = menu.getBoundingClientRect().height || Math.min(menu.scrollHeight, window.innerHeight - edge * 2);
+  const spaceBelow = window.innerHeight - rect.bottom - edge;
+  const top = spaceBelow >= Math.min(menuHeight, 240)
+    ? rect.bottom + 6
+    : Math.max(edge, rect.top - menuHeight - 6);
+  menu.style.left = `${Math.round(left)}px`;
+  menu.style.top = `${Math.round(top)}px`;
+}
+
+function closeFeedFilterMenu({ returnFocus = false } = {}) {
+  const menu = document.getElementById('feed-filter-menu');
+  const trigger = feedFilterMenuTrigger;
+  const wasMobileOpen = document.body.classList.contains('mobile-feed-filter-open');
+  feedFilterMenuTrigger = null;
+  document.body.classList.remove('mobile-feed-filter-open');
+  document.getElementById('feed-filter-button')?.setAttribute('aria-expanded', 'false');
+  const mobileButton = document.getElementById('mobile-feed-filter-toggle');
+  mobileButton?.setAttribute('aria-expanded', 'false');
+  if (mobileButton) {
+    const currentLabel = document.getElementById('feed-filter-button-label')?.textContent || 'すべてのフィード';
+    setButtonHelp(mobileButton, 'フィード選択');
+    mobileButton.setAttribute('aria-label', `フィード選択を開く（現在: ${currentLabel}）`);
+  }
+  if (menu?.matches(':popover-open')) menu.hidePopover();
+  if (wasMobileOpen && window.matchMedia('(max-width: 760px)').matches) clearSearchFilters();
+  if (returnFocus) trigger?.focus();
+}
+
+function openFeedFilterMenu(trigger) {
+  const menu = document.getElementById('feed-filter-menu');
+  if (!menu || !trigger) return;
+  if (feedFilterMenuTrigger === trigger) {
+    closeFeedFilterMenu();
+    return;
+  }
+  if (feedFilterMenuTrigger) closeFeedFilterMenu();
+  if (trigger.id === 'mobile-feed-filter-toggle') {
+    setMobileFeedInputOpen(false);
+    document.body.classList.add('mobile-feed-filter-open');
+  }
+  feedFilterMenuTrigger = trigger;
+  renderFeedSelect();
+  trigger.setAttribute('aria-expanded', 'true');
+  if (trigger.id === 'mobile-feed-filter-toggle') {
+    setButtonHelp(trigger, 'フィード選択を閉じる');
+    trigger.setAttribute('aria-label', 'フィード選択を閉じる');
+  }
+  menu.showPopover();
+  positionFeedFilterMenu(trigger);
+  requestAnimationFrame(() => {
+    const options = [...menu.querySelectorAll('button')].filter(button => button.offsetParent !== null);
+    const selected = options.find(button => button.getAttribute('aria-checked') === 'true');
+    (selected || options[0])?.focus();
+  });
+}
+
+function selectFeedFromFilterMenu(value) {
+  selectedFeedUrl = selectValueToFeed(value);
+  currentIndex = -1;
+  renderFeedSelect();
+  applyFilter();
+  showDetail(-1);
+  closeFeedFilterMenu();
+}
+
+function toggleFeedFolder(folderName) {
+  if (collapsedFeedFolders.has(folderName)) collapsedFeedFolders.delete(folderName);
+  else collapsedFeedFolders.add(folderName);
+  saveCollapsedFeedFolders();
+  renderFeedSelect();
+  requestAnimationFrame(() => {
+    const toggle = [...document.querySelectorAll('#feed-filter-menu [data-folder-toggle]')]
+      .find(button => button.dataset.folderToggle === folderName);
+    toggle?.focus();
+  });
 }
 
 function applyFilter() {
@@ -7026,17 +7312,13 @@ function setMobileFeedInputOpen(open) {
 }
 
 function setMobileFeedFilterOpen(open) {
-  const wasOpen = document.body.classList.contains('mobile-feed-filter-open');
-  document.body.classList.toggle('mobile-feed-filter-open', open);
-  if (open) setMobileFeedInputOpen(false);
-  // モバイルの検索バーはフィード選択と一緒に閉じるため、隠れたフィルタが残らないよう解除する
-  if (!open && wasOpen && window.matchMedia('(max-width: 760px)').matches) clearSearchFilters();
   const btn = document.getElementById('mobile-feed-filter-toggle');
   if (!btn) return;
-  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  btn.setAttribute('aria-label', open ? 'フィード選択を閉じる' : 'フィード選択を開く');
-  setButtonHelp(btn, open ? 'フィード選択を閉じる' : 'フィード選択');
-  if (open) renderMobileFeedSelect();
+  if (open) {
+    if (feedFilterMenuTrigger !== btn) openFeedFilterMenu(btn);
+  } else if (feedFilterMenuTrigger === btn || document.body.classList.contains('mobile-feed-filter-open')) {
+    closeFeedFilterMenu();
+  }
 }
 
 // ============================================================
@@ -7064,18 +7346,53 @@ document.getElementById('mobile-feed-input-toggle').addEventListener('click', ()
 });
 
 document.getElementById('mobile-feed-filter-toggle').addEventListener('click', () => {
-  setMobileFeedFilterOpen(!document.body.classList.contains('mobile-feed-filter-open'));
+  setMobileFeedFilterOpen(feedFilterMenuTrigger?.id !== 'mobile-feed-filter-toggle');
 });
 
-document.getElementById('mobile-feed-filter-select').addEventListener('change', e => {
-  selectedFeedUrl = selectValueToFeed(e.target.value);
-  currentIndex = -1;
-  renderFeedSelect();
-  applyFilter();
-  showDetail(-1);
-  setMobileFeedFilterOpen(false);
+document.getElementById('feed-filter-button').addEventListener('click', e => {
+  openFeedFilterMenu(e.currentTarget);
 });
 
+document.getElementById('feed-filter-menu').addEventListener('click', e => {
+  const folderToggle = e.target.closest('[data-folder-toggle]');
+  if (folderToggle) {
+    toggleFeedFolder(folderToggle.dataset.folderToggle);
+    return;
+  }
+  const option = e.target.closest('[data-feed-value]');
+  if (option) selectFeedFromFilterMenu(option.dataset.feedValue);
+});
+
+document.getElementById('feed-filter-menu').addEventListener('keydown', e => {
+  const menu = e.currentTarget;
+  const options = [...menu.querySelectorAll('button')].filter(button => button.offsetParent !== null);
+  const index = options.indexOf(document.activeElement);
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeFeedFilterMenu({ returnFocus: true });
+    return;
+  }
+  let nextIndex = null;
+  if (e.key === 'ArrowDown') nextIndex = Math.min(options.length - 1, Math.max(0, index + 1));
+  if (e.key === 'ArrowUp') nextIndex = Math.max(0, index < 0 ? 0 : index - 1);
+  if (e.key === 'Home') nextIndex = 0;
+  if (e.key === 'End') nextIndex = options.length - 1;
+  if (nextIndex !== null) {
+    e.preventDefault();
+    options[nextIndex]?.focus();
+  }
+});
+
+document.addEventListener('pointerdown', e => {
+  if (!feedFilterMenuTrigger) return;
+  const menu = document.getElementById('feed-filter-menu');
+  if (menu.contains(e.target) || e.target.closest('#feed-filter-button, #mobile-feed-filter-toggle')) return;
+  closeFeedFilterMenu();
+});
+
+window.addEventListener('resize', () => {
+  if (feedFilterMenuTrigger) positionFeedFilterMenu(feedFilterMenuTrigger);
+});
 
 document.getElementById('save-btn').addEventListener('click', () => {
   const data = {
@@ -7257,16 +7574,9 @@ document.getElementById('feed-delete-btn').addEventListener('click', () => {
   if (selectedFeedUrl && selectedFeedUrl !== 'READ_LATER' && !isFolderSelection(selectedFeedUrl)) deleteFeed(selectedFeedUrl);
 });
 
-document.getElementById('feed-filter-select').addEventListener('change', e => {
-  selectedFeedUrl = selectValueToFeed(e.target.value);
-  currentIndex = -1;
-  renderFeedSelect();
-  applyFilter();
-  showDetail(-1);
-});
-
 window.matchMedia('(max-width: 760px)').addEventListener('change', () => {
   const isMobile = window.matchMedia('(max-width: 760px)').matches;
+  closeFeedFilterMenu();
   renderArticleList();
   if (!isMobile) {
     document.body.classList.remove('mobile-detail-open');
@@ -7625,6 +7935,10 @@ function applyFolderModal() {
       feed.folder = typedName;
       feed.updatedAt = changedAt;
     });
+    if (collapsedFeedFolders.delete(oldName)) {
+      collapsedFeedFolders.add(typedName);
+      saveCollapsedFeedFolders();
+    }
     saveFeeds();
     selectedFeedUrl = FOLDER_STATE_PREFIX + typedName;
     renderFeedSelect();
@@ -7643,6 +7957,7 @@ function dissolveFolderFromModal() {
     feed.folder = '';
     feed.updatedAt = changedAt;
   });
+  if (collapsedFeedFolders.delete(folderName)) saveCollapsedFeedFolders();
   saveFeeds();
   selectedFeedUrl = null;
   currentIndex = -1;
