@@ -3499,12 +3499,14 @@ const CORS_STRATEGIES = [
       const hasDate = json.items.some(item => item.pubDate && item.pubDate.trim() && !item.pubDate.startsWith('0000'));
       if (!hasDate) throw new Error('rss2json: no valid dates (RDF dc:date not converted)');
       const esc = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      // CDATA内に ]]> がそのまま含まれるとCDATAが途中で閉じてXMLパースエラーになるため分割する
+      const escCdata = s => (s || '').replace(/\]\]>/g, ']]]]><![CDATA[>');
       const items = json.items.map(item => [
         '<item>',
         `<title>${esc(item.title)}</title>`,
         `<link>${esc(item.link)}</link>`,
         `<pubDate>${esc((item.pubDate || '').replace(' ', 'T'))}</pubDate>`,
-        `<description><![CDATA[${item.content || item.description || ''}]]></description>`,
+        `<description><![CDATA[${escCdata(item.content || item.description || '')}]]></description>`,
         item.thumbnail ? `<media:thumbnail url="${esc(item.thumbnail)}"/>` : '',
         '</item>',
       ].join('')).join('');
@@ -3526,9 +3528,10 @@ const CORS_STRATEGIES = [
     extractText: async resp => resp.text(),
     rawFetch: true,
   },
+  // corsproxy.io は 2026-08 に API キー必須へ仕様変更され、キーなし URL は恒久的に 403 (keyless_legacy_url)
   {
-    name: 'corsproxy',
-    buildUrl: url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    name: 'cors-lol',
+    buildUrl: url => `https://api.cors.lol/?url=${encodeURIComponent(url)}`,
     extractText: async resp => resp.text(),
     rawFetch: true,
   },
@@ -3538,7 +3541,7 @@ const CORS_STRATEGIES = [
 // State
 // ============================================================
 const CLOUD_STORAGE_KEY = 'rss-cloud-config';
-const APP_VERSION = '2026-07-22.pull-refresh-clip-fix';
+const APP_VERSION = '2026-08-27.proxy-refresh';
 const DEFAULT_PROFILE_ID = 'default';
 const FOLDER_NAME_MAX = 30;
 const CONFIG_HASH_PREFIX = '#rss-config=';
@@ -5074,7 +5077,8 @@ let unreadOnly = false;
 function saveRead() {
   try {
     // 肥大化防止: 現存する記事・保存記事・ピンに含まれないURLは間引く
-    if (readUrls.size > 3000) {
+    // allArticlesが読込前（起動直後）だと現存記事の既読状態まで削ってしまうため、読込後にのみ実行
+    if (allArticles.length > 0 && readUrls.size > 3000) {
       const keep = new Set([
         ...allArticles.map(a => a.link),
         ...savedArticles.map(a => a.link),
@@ -7831,6 +7835,7 @@ document.addEventListener('keydown', (e) => {
   // Ignore when typing in form fields / select focused / modal open
   const tag = e.target.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
+  if (feedFilterMenuTrigger) return; // フィード選択メニュー表示中は独自のkeydownハンドラに任せる
   if (isAnyModalOpen()) {
     if (e.key === 'Escape') closeTopModal();
     return;
@@ -8066,6 +8071,7 @@ document.getElementById('load-input').addEventListener('change', (e) => {
             ...a,
             title: typeof a.title === 'string' ? a.title : '',
             link: normalizeHttpUrl(a.link),
+            feedUrl: normalizeHttpUrl(a.feedUrl),
             image: normalizeHttpUrl(a.image),
             content: typeof a.content === 'string' ? a.content : '',
             pubDate: normalizeArticleDate(a.pubDate),
